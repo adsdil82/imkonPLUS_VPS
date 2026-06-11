@@ -1,0 +1,45 @@
+=== NasiyaPro — Xostga joylash qo'llanmasi ===
+Sana: 03.06.2026 14:17
+
+── TALAB QILINADIGAN VERSIYALAR ──────────────────────────
+• PHP 8.2 yoki 8.3
+• MySQL 5.7+ yoki MariaDB 10.4+
+• Composer 2.x
+
+── BOSQICHLAR ────────────────────────────────────────────
+
+1. FAYLLARNI YUKLASH
+   • Barcha fayllarni hosting'ning public_html/ yoki www/ papkasiga yuklang
+   • Yoki alohida papkaga yuklang va public/ ni document root qiling
+
+2. .env FAYLNI SOZLASH
+   • .env.production_NAMUNA ni .env ga o'zgartiring
+   • DB_DATABASE, DB_USERNAME, DB_PASSWORD ni to'ldiring
+   • APP_URL ni o'z domeningizga o'zgartiring
+   • php artisan key:generate
+
+3. BAZANI IMPORT QILISH
+   • phpMyAdmin > yangi DB yarating
+   • Import > nasiyapro_db.zip ichidagi SQL faylni yuklang
+
+4. COMPOSER PAKETLARINI O'RNATISH
+   composer install --no-dev --optimize-autoloader
+
+5. ARTISAN BUYRUQLARI
+   php artisan migrate (agar kerak bo'lsa)
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   php artisan storage:link
+
+6. PAPKA RUXSATLARI
+   chmod -R 755 storage
+   chmod -R 755 bootstrap/cache
+
+7. NGINX/APACHE SOZLAMASI
+   Document root: public/ papkasiga ko'rsating
+
+── XAVFSIZLIK ──────────────────────────────────────────
+• APP_DEBUG=false bo'lsin
+• .env faylni web orqali o'qib bo'lmasligi kerak
+• storage/ papkasiga tashqi kirish bloklangan bo'lsin

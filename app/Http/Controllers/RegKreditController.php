@@ -1,0 +1,239 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\RegKreditRequest;
+use App\Models\Filial;
+use App\Models\Mijoz;
+use App\Models\RegKredit;
+use App\Models\Foydalanuvchi;
+use App\Models\TulovTuri;
+use App\Models\Tovar;
+use App\Models\TovarGuruh;
+use App\Models\TovarKatalog;
+use App\Services\TulovService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Barryvdh\DomPDF\Facade\Pdf;
+
+class RegKreditController extends Controller
+{
+    public function __construct(private TulovService $tulovService) {}
+
+    /** Shartnomalar ro'yxati */
+    public function index(Request $request)
+    {
+        $user     = Auth::user();
+        $filialId = $user->isAdmin()
+            ? ($request->filial_id ?: null)
+            : $user->filial_id;
+
+        $query = RegKredit::with(['mijoz', 'filial', 'xodim'])
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->when($request->holat, fn($q) => $q->where('holat', $request->holat))
+            ->when($request->qidiruv, fn($q) => $q->qidirish($request->qidiruv));
+
+        // Ajax qidiruv
+        if ($request->expectsJson()) {
+            return response()->json(
+                $query->limit(10)->get(['id', 'shartnoma_raqam', 'mijoz_id'])
+            );
+        }
+
+        $kreditlar = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+        $filiallar = $user->isAdmin() ? Filial::faol()->get() : collect();
+
+        return view('kredit.index', compact('kreditlar', 'filiallar', 'filialId'));
+    }
+
+    /** Yangi shartnoma formasi */
+    public function create(Request $request)
+    {
+        $user      = Auth::user();
+        $filiallar = $user->isAdmin()
+            ? Filial::faol()->get()
+            : Filial::where('id', $user->filial_id)->get();
+
+        // URL'dan mijoz tanlangan bo'lsa
+        $mijoz = $request->mijoz_id ? Mijoz::find($request->mijoz_id) : null;
+
+        // Ombordan tovarlar (qoldig'i bor, modal uchun guruh bo'yicha)
+        $tovarGuruhlar = TovarGuruh::with([
+            'tovarlar' => fn($q) => $q->faol()->where('qoldiq', '>', 0)->orderBy('nomi')->select(['id','guruh_id','nomi','qoldiq','sotish_narx','birlik'])
+        ])->whereHas('tovarlar', fn($q) => $q->faol()->where('qoldiq', '>', 0))
+          ->orderBy('nomi')->get(['id','nomi']);
+
+        return view('kredit.create', compact('filiallar', 'mijoz', 'tovarGuruhlar'));
+    }
+
+    /** Shartnomani saqlash */
+    public function store(RegKreditRequest $request)
+    {
+        return DB::transaction(function () use ($request) {
+            $data    = $request->validated();
+            $user    = Auth::user();
+            $filial  = Filial::findOrFail($data['filial_id']);
+
+            // Shartnoma raqamini avtomatik yaratish
+            $yil    = now()->year;
+            $raqam  = RegKredit::yangiRaqamYaratish($filial, $yil);
+
+            // Shartnomani yaratish
+            $kredit = RegKredit::create([
+                ...$data,
+                'shartnoma_raqam'     => $raqam,
+                'xodim_id'            => $user->id,
+                'kredit_summa'        => $data['kredit_summa'],
+                'qoldiq_qarz'         => $data['kredit_summa'],
+                'oylik_tolov_miqdori' => $data['oylik_tolov_miqdori'],
+                'tolov_qilingan'      => 0,
+                'holat'               => 'faol',
+            ]);
+
+            // Tovarlarni saqlash
+            foreach ($data['tovarlar'] as $tovar) {
+                Tovar::create([
+                    'reg_kredit_id' => $kredit->id,
+                    'nomi'          => $tovar['nomi'],
+                    'soni'          => $tovar['soni'],
+                    'narx'          => $tovar['narx'],
+                    'jami_narx'     => $tovar['soni'] * $tovar['narx'],
+                    'barkod'        => $tovar['barkod'] ?? null,
+                ]);
+            }
+
+            // To'lov grafikini avtomatik yaratish
+            $this->grafikYarat($kredit);
+
+            // Boshlang'ich versiya
+            $this->tulovService->versiyaSaqlash($kredit, 'Yangi shartnoma yaratildi', []);
+
+            return redirect()
+                ->route('kreditlar.show', $kredit)
+                ->with('muvaffaqiyat', "Shartnoma {$raqam} muvaffaqiyatli yaratildi.");
+        });
+    }
+
+    /** Shartnoma batafsil ko'rish (tablar bilan) */
+    public function show(RegKredit $kredit)
+    {
+        $this->filialRuxsatTekshir($kredit->filial_id);
+
+        $kredit->load([
+            'mijoz.filial',
+            'filial',
+            'xodim',
+            'kafil',
+            'tovarlar',
+            'grafik',
+            'tulovlar.tulovTuri',
+            'tulovlar.xodim',
+            'oldinTulovlar.tulovTuri',
+            'oldinTulovlar.xodim',
+            'versiyalar.xodim',
+        ]);
+
+        $tulovTurlari = TulovTuri::faol()->get();
+        $xodimlar     = Foydalanuvchi::faol()->orderBy('ism_familiya')->get(['id','ism_familiya','filial_id']);
+        $filiallar    = Filial::faol()->orderBy('nomi')->get(['id','nomi','kod']);
+
+        return view('kredit.show', compact('kredit', 'tulovTurlari', 'xodimlar', 'filiallar'));
+    }
+
+    /** Shartnoma tahrirlash formasi */
+    public function edit(RegKredit $kredit)
+    {
+        $this->filialRuxsatTekshir($kredit->filial_id);
+
+        if (!in_array(Auth::user()->rol, ['admin', 'menejer'])) {
+            abort(403);
+        }
+
+        $kredit->load(['mijoz', 'tovarlar']);
+        $filiallar = Auth::user()->isAdmin()
+            ? Filial::faol()->get()
+            : Filial::where('id', $kredit->filial_id)->get();
+
+        return view('kredit.edit', compact('kredit', 'filiallar'));
+    }
+
+    /** Shartnomani yangilash */
+    public function update(Request $request, RegKredit $kredit)
+    {
+        $this->filialRuxsatTekshir($kredit->filial_id);
+
+        if (!in_array(Auth::user()->rol, ['admin', 'menejer'])) {
+            abort(403);
+        }
+
+        $request->validate([
+            'sabab'         => ['required', 'string', 'min:5'],
+            'kafil_ism'     => ['nullable', 'string', 'max:200'],
+            'kafil_telefon' => ['nullable', 'string', 'max:50'],
+            'kafil_manzil'  => ['nullable', 'string'],
+            'izoh'          => ['nullable', 'string'],
+            'holat'         => ['required', 'in:faol,yopilgan,muddati_otgan,muzlatilgan'],
+        ]);
+
+        $yangiMalumot = $request->only(['kafil_ism', 'kafil_telefon', 'kafil_manzil', 'izoh', 'holat']);
+
+        // Versiyani saqlash
+        $this->tulovService->versiyaSaqlash($kredit, $request->sabab, $yangiMalumot);
+
+        $kredit->update($yangiMalumot);
+
+        return redirect()
+            ->route('kreditlar.show', $kredit)
+            ->with('muvaffaqiyat', 'Shartnoma yangilandi.');
+    }
+
+    /** PDF chop etish */
+    public function pdf(RegKredit $kredit)
+    {
+        $this->filialRuxsatTekshir($kredit->filial_id);
+
+        $kredit->load(['mijoz', 'filial', 'xodim', 'tovarlar', 'grafik']);
+
+        $pdf = Pdf::loadView('kredit.pdf', compact('kredit'))
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->stream("shartnoma-{$kredit->shartnoma_raqam}.pdf");
+    }
+
+    /** To'lov grafigini yaratish (yangi shartnoma uchun) */
+    private function grafikYarat(RegKredit $kredit): void
+    {
+        if ($kredit->kredit_summa <= 0 || $kredit->muddati_oy <= 0) return;
+
+        $oylikTolov = $kredit->oylik_tolov_miqdori;
+        $qoldiq     = $kredit->kredit_summa;
+
+        for ($oy = 1; $oy <= $kredit->muddati_oy; $oy++) {
+            // Har oyning to'lov sanasi
+            $sana = $kredit->boshlanish_sana->copy()->addMonths($oy - 1);
+
+            // Oxirgi oyda qoldiq miqdorni to'liq yopish
+            $buOyTolov = ($oy === $kredit->muddati_oy) ? $qoldiq : min($oylikTolov, $qoldiq);
+            $qoldiq   -= $buOyTolov;
+
+            \App\Models\Grafik::create([
+                'reg_kredit_id' => $kredit->id,
+                'oylik_tartib'  => $oy,
+                'tolov_sana'    => $sana->toDateString(),
+                'tolov_summa'   => round($buOyTolov, 2),
+                'qoldiq_suma'   => round($qoldiq, 2),
+                'holat'         => 'tolanmagan',
+            ]);
+        }
+    }
+
+    /** Filial ruxsatini tekshirish */
+    private function filialRuxsatTekshir(int $kreditFilialId): void
+    {
+        $user = Auth::user();
+        if (!$user->isAdmin() && $user->filial_id !== $kreditFilialId) {
+            abort(403, 'Bu shartnoma sizning filialingizga tegishli emas.');
+        }
+    }
+}

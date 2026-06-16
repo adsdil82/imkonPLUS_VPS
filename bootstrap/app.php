@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         // Rol tekshiruv middleware larini ro'yxatdan o'tkazish
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'filial.check' => \App\Http\Middleware\FilialCheck::class,
             'rol.check'    => \App\Http\Middleware\RolCheck::class,

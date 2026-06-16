@@ -7,20 +7,19 @@ use Illuminate\Database\Seeder;
 class DatabaseSeeder extends Seeder
 {
     /**
-     * Tartibi MUHIM:
-     *   1. Filiallar (boshqa jadvallar uchun FK)
-     *   2. To'lov turlari
-     *   3. Foydalanuvchilar (filial_id FK)
+     * ImkonPlus uchun:
+     *   1. Filiallar (1 ta, id=1)
+     *   2. Foydalanuvchilar (admin + import xodimi)
+     *
+     *   To'lov turlari import paytida avtomatik yaratiladi (firstOrCreate).
      *
      * Import uchun:
-     *   php artisan nasiya:import hammasi --xodim-id=7
-     *   (7 = import@nasiyapro.uz ning ID si)
+     *   php artisan nasiya:import hammasi --xodim-id={import xodimi ID}
      */
     public function run(): void
     {
         $this->call([
             FiliallarSeeder::class,
-            TulovTurlariSeeder::class,
             FoydalanuvchilarSeeder::class,
         ]);
     }

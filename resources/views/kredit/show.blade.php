@@ -236,6 +236,7 @@
                 <table class="table table-hover mb-0 align-middle">
                     <thead class="table-light">
                         <tr>
+                            <th style="width:55px">ID</th>
                             <th>Sana</th>
                             <th class="text-end">Summa</th>
                             <th>To'lov turi</th>
@@ -248,6 +249,7 @@
                     <tbody>
                         @forelse($kredit->tulovlar as $tulov)
                         <tr>
+                            <td class="text-muted small">#{{ $tulov->id }}</td>
                             <td>{{ $tulov->tolov_sana?->format('d.m.Y') ?? '—' }}</td>
                             <td class="text-end fw-bold text-success">
                                 {{ number_format($tulov->summa, 0, '.', ' ') }}
@@ -768,6 +770,7 @@ function filialKochir() {
     .catch(() => { window.location.reload(); });
 }
 </script>
+<script>
 var ttModal = null;
 var odModal = null;
 

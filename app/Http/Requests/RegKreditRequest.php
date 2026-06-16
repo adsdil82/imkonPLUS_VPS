@@ -46,7 +46,8 @@ class RegKreditRequest extends FormRequest
             'tovarlar.*.nomi'     => ['required', 'string', 'max:300'],
             'tovarlar.*.soni'     => ['required', 'integer', 'min:1'],
             'tovarlar.*.narx'     => ['required', 'numeric', 'min:0'],
-            'tovarlar.*.barkod'   => ['nullable', 'string', 'max:100'],
+            'tovarlar.*.barkod'          => ['nullable', 'string', 'max:100'],
+            'tovarlar.*.tovar_katalog_id' => ['nullable', 'integer'],
         ];
     }
 

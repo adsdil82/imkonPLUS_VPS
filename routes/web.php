@@ -30,6 +30,8 @@ use App\Http\Controllers\SmsController;
 use App\Http\Controllers\TelegramController;
 use App\Http\Controllers\EmailNotificationController;
 use App\Http\Controllers\HybridMailController;
+use App\Http\Controllers\HisobRejasiController;
+use App\Http\Controllers\YangiTulovTuriController;
 use App\Http\Controllers\NotificationTemplateController;
 
 // ─── Autentifikatsiya ─────────────────────────────────────────────
@@ -347,6 +349,19 @@ Route::middleware('auth')->group(function () {
             Route::put('/{shablon}',         [NotificationTemplateController::class, 'update'])->name('update');
             Route::post('/{shablon}/preview',[NotificationTemplateController::class, 'preview'])->name('preview');
         });
+
+    });
+
+    // Buxgalteriya
+    Route::prefix('buxgalteriya')->name('buxgalteriya.')->middleware('rol.check:admin')->group(function () {
+        Route::get('/hisoblar',            [HisobRejasiController::class, 'index'])->name('hisoblar.index');
+        Route::post('/hisoblar',           [HisobRejasiController::class, 'store'])->name('hisoblar.store');
+        Route::put('/hisoblar/{hisob}',    [HisobRejasiController::class, 'update'])->name('hisoblar.update');
+        Route::delete('/hisoblar/{hisob}', [HisobRejasiController::class, 'destroy'])->name('hisoblar.destroy');
+        Route::get('/tulov-turlari',           [YangiTulovTuriController::class, 'index'])->name('tulov_turlari.index');
+        Route::post('/tulov-turlari',          [YangiTulovTuriController::class, 'store'])->name('tulov_turlari.store');
+        Route::put('/tulov-turlari/{tur}',     [YangiTulovTuriController::class, 'update'])->name('tulov_turlari.update');
+        Route::delete('/tulov-turlari/{tur}',  [YangiTulovTuriController::class, 'destroy'])->name('tulov_turlari.destroy');
     });
 
 

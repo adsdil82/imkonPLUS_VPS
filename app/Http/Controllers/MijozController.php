@@ -116,8 +116,25 @@ class MijozController extends Controller
             : $user->filial_id;
 
         $q = trim($request->q ?? '');
+
+        // Bo'sh q bo'lsa — birinchi 50 ta (avtomatik yuklash uchun)
         if (mb_strlen($q) < 2) {
-            return response()->json([]);
+            $mijozlar = Mijoz::with('filial:id,nomi,kod')
+                ->when($filialId, fn($qu) => $qu->where('filial_id', $filialId))
+                ->select(['id','filial_id','familiya','ism','otasining_ismi',
+                          'telefon','passport_seria','passport_raqam','holat'])
+                ->orderBy('familiya')
+                ->limit(50)
+                ->get();
+            return response()->json($mijozlar->map(fn($m) => [
+                'id'       => $m->id,
+                'fio'      => trim($m->familiya . ' ' . $m->ism .
+                              ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
+                'telefon'  => $m->telefon ?? '',
+                'passport' => trim(($m->passport_seria ?? '') . ' ' . ($m->passport_raqam ?? '')),
+                'filial'   => $m->filial?->nomi ?? '',
+                'holat'    => $m->holat,
+            ]));
         }
 
         // Ikkala alifbo versiyasini tayyorlaymiz

@@ -176,7 +176,23 @@ class TulovController extends Controller
         $soz      = \App\Models\Sozlama::barchasi();
         $summaSoz = $this->summaniSozdaIfodalash((float)$tulov->summa);
 
-        return view('tulov.kvitansiya', compact('kredit','tulov','soz','summaSoz'));
+        // Ushbu to'lov amalga oshirilgan paytdagi qoldiq qarz
+        if ($tulov->tolov_sana) {
+            $qoldiqSana = (float)$kredit->kredit_summa - (float)$kredit->tulovlar()
+                ->where(function ($q) use ($tulov) {
+                    $q->where('tolov_sana', '<', $tulov->tolov_sana)
+                      ->orWhere(function ($q2) use ($tulov) {
+                          $q2->where('tolov_sana', $tulov->tolov_sana)
+                             ->where('id', '<=', $tulov->id);
+                      });
+                })
+                ->sum('summa');
+            $qoldiqSana = max(0, $qoldiqSana);
+        } else {
+            $qoldiqSana = max(0, (float)$kredit->qoldiq_qarz);
+        }
+
+        return view('tulov.kvitansiya', compact('kredit','tulov','soz','summaSoz','qoldiqSana'));
     }
 
     /** Summani o'zbek tilida so'zda ifodalash */

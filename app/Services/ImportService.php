@@ -5,9 +5,13 @@ namespace App\Services;
 use App\Models\Filial;
 use App\Models\Foydalanuvchi;
 use App\Models\Grafik;
+use App\Models\Harajat;
 use App\Models\Mijoz;
 use App\Models\OldinTulov;
 use App\Models\RegKredit;
+use App\Models\Taminotchi;
+use App\Models\TaminotKirim;
+use App\Models\TaminotKirimQator;
 use App\Models\Tovar;
 use App\Models\Tulov;
 use App\Models\TulovTuri;
@@ -26,6 +30,9 @@ use Illuminate\Support\Facades\Log;
  *   6. php artisan nasiya:import grafik
  *   7. php artisan nasiya:import tulovlar
  *   8. php artisan nasiya:import oldin-tulovlar
+ *   9. php artisan nasiya:import taminotchilar
+ *  10. php artisan nasiya:import taminot-kirimlar
+ *  11. php artisan nasiya:import harajatlar
  *
  * MUHIM: Har bir bosqich avvalgisiga bog'liq!
  * Jadvallar bo'shatiladi va qayta to'ldiriladi (idempotent).
@@ -148,6 +155,13 @@ class ImportService
             $jamiSumma  = (float) ($q->summa ?? 0);
             $qoldiqQarz = (float) ($q->qoldiq_suma ?? 0);
 
+            $boshlangichTolov = is_array($q->oldidan_tulov ?? null) ? 0.0 : (float) ($q->oldidan_tulov ?? 0);
+            $kreditSumma = max(0, $jamiSumma - $boshlangichTolov);
+
+            $muddatiOy = (int) ($q->kr_produkt ?? 0);
+            if ($muddatiOy < 1 || $muddatiOy > 12) $muddatiOy = 12;
+            $foizStavka = 10 + $muddatiOy * 5;
+
             $batch[] = [
                 'eski_id'             => $q->id_kredit,
                 'shartnoma_raqam'     => 'IMP-' . intval($q->filial_kod) . '-' . intval($q->id_kredit),
@@ -155,15 +169,15 @@ class ImportService
                 'filial_id'           => $filialId,
                 'xodim_id'            => $defaultXodimId,
                 'jami_summa'          => $jamiSumma,
-                'boshlangich_tolov'   => (float) ($q->oldidan_tulov ?? 0),
-                'kredit_summa'        => (float) ($q->kr_produkt ?? 0),
+                'boshlangich_tolov'   => $boshlangichTolov,
+                'kredit_summa'        => $kreditSumma,
                 'tolov_qilingan'      => max(0, $jamiSumma - $qoldiqQarz),
                 'qoldiq_qarz'         => $qoldiqQarz,
                 'boshlanish_sana'     => $this->sanaTuzat($q->sha_sana ?? null),
                 'tugash_sana'         => $this->sanaTuzat($q->oxir_sana ?? $q->end_sana ?? null),
-                'oylik_tolov_miqdori' => (float) ($q->masulKT ?? 0),
-                'muddati_oy'          => 12,
-                'foiz_stavka'         => (float) ($q->foizstav ?? 0),
+                'oylik_tolov_miqdori' => round($kreditSumma / $muddatiOy, 2),
+                'muddati_oy'          => $muddatiOy,
+                'foiz_stavka'         => $foizStavka,
                 'holat'               => $this->kreditHolatMap($q->sts ?? null),
                 'created_at'          => $now,
                 'updated_at'          => $now,
@@ -379,6 +393,189 @@ class ImportService
         }
 
         Log::info('Oldindan to\'lovlar import qilindi', ['soni' => $count]);
+    }
+
+    // ─── Ta'minotchilar (kONTR_AGENT) ───────────────────────────────
+
+    /**
+     * temp_taminotchi → taminotchilar jadvali.
+     *
+     * Ustun mapping:
+     *   nomi          → nomi
+     *   manzil        → manzil
+     *   bank_nomi     → bank_nomi
+     *   bank_hisob    → bank_hisob
+     *   mfo           → mfo
+     *   inn           → inn
+     *   telefon       → telefon
+     *   kontakt_shaxs → kontakt_shaxs
+     *   izoh          → izoh
+     *
+     * @param iterable $qatorlar — DB::table('temp_taminotchi')->cursor()
+     */
+    public function taminotchilarImport(iterable $qatorlar, int &$count = 0): void
+    {
+        $filialMap = Filial::pluck('id', 'id')->toArray();
+
+        foreach ($qatorlar as $q) {
+            $filialId = $filialMap[$q->filial_kod] ?? null;
+            if (!$filialId) continue;
+
+            Taminotchi::updateOrCreate(
+                ['nomi' => $q->nomi, 'filial_id' => $filialId],
+                [
+                    'nomi'          => $q->nomi,
+                    'manzil'        => $q->manzil ?? null,
+                    'bank_nomi'     => $q->bank_nomi ?? null,
+                    'bank_hisob'    => $q->bank_hisob ?? null,
+                    'mfo'           => $q->mfo ?? null,
+                    'inn'           => $q->inn ?? null,
+                    'telefon'       => $q->telefon ?? null,
+                    'kontakt_shaxs' => $q->kontakt_shaxs ?? null,
+                    'izoh'          => $q->izoh ?? null,
+                    'holat'         => 'faol',
+                    'filial_id'     => $filialId,
+                ]
+            );
+            $count++;
+        }
+
+        Log::info('Ta\'minotchilar import qilindi', ['soni' => $count]);
+    }
+
+    // ─── Ta'minotdan kirimlar (reg_prixod + kirim_tv) ───────────────
+
+    /**
+     * temp_taminot_kirim → taminot_kirimlar,
+     * temp_taminot_kirim_qator → taminot_kirim_qatorlar.
+     *
+     * Ta'minotchi eski_id → yangi id mosligi temp_taminotchi orqali
+     * (nomi ustuni bo'yicha) topiladi. taminot_kirimlar.hujjat_raqam
+     * "IMP-PRIXOD-{eski_id}" ko'rinishida saqlanadi — keyinroq
+     * qatorlarni bog'lash uchun ishlatiladi.
+     *
+     * @param iterable $kirimQatorlar — DB::table('temp_taminot_kirim')->cursor()
+     * @param iterable $tafsilotQatorlar — DB::table('temp_taminot_kirim_qator')->cursor()
+     */
+    public function taminotKirimlarImport(iterable $kirimQatorlar, iterable $tafsilotQatorlar, int $defaultXodimId, int &$count = 0, int &$qatorCount = 0): void
+    {
+        $filialMap = Filial::pluck('id', 'id')->toArray();
+
+        // Eski taminotchi eski_id → nomi → yangi taminotchi id
+        $eskiNomiMap   = DB::table('temp_taminotchi')->pluck('nomi', 'eski_id')->toArray();
+        $taminotchiMap = Taminotchi::pluck('id', 'nomi')->toArray();
+
+        $now = now()->toDateTimeString();
+
+        foreach ($kirimQatorlar as $q) {
+            $filialId = $filialMap[$q->filial_kod] ?? null;
+            if (!$filialId) continue;
+
+            $nomi = $eskiNomiMap[$q->taminotchi_eski_id] ?? null;
+            $taminotchiId = $nomi ? ($taminotchiMap[$nomi] ?? null) : null;
+            if (!$taminotchiId) continue;
+
+            $jamiSumma = (float) ($q->summa ?? 0);
+
+            TaminotKirim::updateOrCreate(
+                ['hujjat_raqam' => 'IMP-PRIXOD-' . intval($q->eski_id)],
+                [
+                    'taminotchi_id' => $taminotchiId,
+                    'filial_id'     => $filialId,
+                    'xodim_id'      => $defaultXodimId,
+                    'hujjat_raqam'  => 'IMP-PRIXOD-' . intval($q->eski_id),
+                    'kirim_sana'    => $this->sanaTuzat($q->sana ?? null) ?? now()->toDateString(),
+                    'jami_summa'    => $jamiSumma,
+                    'tolangan'      => 0,
+                    'qoldiq'        => $jamiSumma,
+                    'holat'         => 'kutilmoqda',
+                    'izoh'          => $q->izoh ?? null,
+                ]
+            );
+            $count++;
+        }
+
+        // Qatorlarni bog'lash uchun hujjat_raqam → kirim_id map
+        $kirimIdMap = TaminotKirim::where('hujjat_raqam', 'like', 'IMP-PRIXOD-%')
+            ->pluck('id', 'hujjat_raqam')
+            ->toArray();
+
+        $batch = [];
+        foreach ($tafsilotQatorlar as $q) {
+            $hujjat = 'IMP-PRIXOD-' . intval($q->prixod_eski_id);
+            $kirimId = $kirimIdMap[$hujjat] ?? null;
+            if (!$kirimId) continue;
+
+            $soni = (float) ($q->soni ?? 0);
+            $narx = (float) ($q->narx ?? 0);
+
+            $batch[] = [
+                'kirim_id'   => $kirimId,
+                'tovar_id'   => null,
+                'nomi'       => $q->tovar_nomi ?? 'Nomalum tovar',
+                'miqdor'     => $soni,
+                'birlik'     => 'dona',
+                'narx'       => $narx,
+                'jami'       => $soni * $narx,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            if (count($batch) >= 500) {
+                DB::table('taminot_kirim_qatorlar')->insert($batch);
+                $qatorCount += count($batch);
+                $batch = [];
+            }
+        }
+        if ($batch) {
+            DB::table('taminot_kirim_qatorlar')->insert($batch);
+            $qatorCount += count($batch);
+        }
+
+        Log::info('Ta\'minot kirimlari import qilindi', ['kirim' => $count, 'qatorlar' => $qatorCount]);
+    }
+
+    // ─── Harajatlar (XARAJAT) ───────────────────────────────────────
+
+    /**
+     * temp_harajat → harajatlar jadvali.
+     *
+     * @param iterable $qatorlar — DB::table('temp_harajat')->cursor()
+     */
+    public function harajatlarImport(iterable $qatorlar, int $defaultXodimId, int &$count = 0): void
+    {
+        $filialMap = Filial::pluck('id', 'id')->toArray();
+        $now       = now()->toDateTimeString();
+        $batch     = [];
+
+        foreach ($qatorlar as $q) {
+            $filialId = $filialMap[$q->filial_kod] ?? null;
+            if (!$filialId) continue;
+
+            $batch[] = [
+                'filial_id'  => $filialId,
+                'xodim_id'   => $defaultXodimId,
+                'sana'       => $this->sanaTuzat($q->sana ?? null) ?? now()->toDateString(),
+                'turi'       => $q->turi ?? null,
+                'summa'      => $q->summa ?? 0,
+                'mazmuni'    => $q->mazmuni ?? null,
+                'eski_id'    => $q->eski_id ?? null,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ];
+
+            if (count($batch) >= 500) {
+                DB::table('harajatlar')->insertOrIgnore($batch);
+                $count += count($batch);
+                $batch = [];
+            }
+        }
+        if ($batch) {
+            DB::table('harajatlar')->insertOrIgnore($batch);
+            $count += count($batch);
+        }
+
+        Log::info('Harajatlar import qilindi', ['soni' => $count]);
     }
 
     // ─── Yordamchi metodlar ───────────────────────────────────────

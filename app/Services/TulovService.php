@@ -6,6 +6,8 @@ use App\Models\Grafik;
 use App\Models\OldinTulov;
 use App\Models\RegKredit;
 use App\Models\Tulov;
+use App\Models\TulovTuri;
+use Carbon\Carbon;
 use App\Models\ShartnomavVersioniya;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -51,7 +53,7 @@ class TulovService
                 'tulov_turi_id'    => $malumot['tulov_turi_id'],
                 'summa'            => $malumot['summa'],
                 'tolov_sana'       => $malumot['tolov_sana'],
-                'kvitansiya_raqam' => $malumot['kvitansiya_raqam'] ?? null,
+                'kvitansiya_raqam' => $malumot['kvitansiya_raqam'] ?? $this->kvitansiyaRaqamYarat($malumot['tulov_turi_id'], $malumot['tolov_sana'] ?? now()->toDateString()),
                 'izoh'             => $malumot['izoh'] ?? null,
             ]);
 
@@ -184,5 +186,28 @@ class TulovService
             'yangi_holat'        => array_merge($kredit->toArray(), $yangiMalumot),
             'ozgargan_maydonlar' => $ozgarganlar,
         ]);
+    }
+
+    private function kvitansiyaRaqamYarat(int $tulovTuriId, string $tolovSana): string
+    {
+        $oy  = \Carbon\Carbon::parse($tolovSana)->format('Ym');
+        $tur = TulovTuri::find($tulovTuriId);
+        $nom = mb_strtolower((string)($tur->nomi ?? ''));
+
+        // Naqd: lotincha "naqd" yoki kirilcha "накд"
+        $isNaqd = str_contains($nom, 'naqd') || str_contains($nom, 'накд');
+        $prefix = $isNaqd ? 'N' : 'B';
+
+        $last = Tulov::where('kvitansiya_raqam', 'like', $prefix . '-' . $oy . '-%')
+            ->lockForUpdate()
+            ->orderByDesc('id')
+            ->value('kvitansiya_raqam');
+
+        $tartib = 1;
+        if ($last && preg_match('/-(\d+)$/', $last, $m)) {
+            $tartib = (int)$m[1] + 1;
+        }
+
+        return sprintf('%s-%s-%03d', $prefix, $oy, $tartib);
     }
 }

@@ -670,6 +670,20 @@
                         <span class="nav-label">{{ __('ui.menu_sozlamalar') }}</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="{{ route('buxgalteriya.hisoblar.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.hisoblar*') ? 'active' : '' }}">
+                        <i class="bi bi-journal-bookmark me-2 text-warning"></i>
+                        <span class="nav-label">Hisoblar rejasi</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('buxgalteriya.tulov_turlari.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.tulov_turlari*') ? 'active' : '' }}">
+                        <i class="bi bi-credit-card-2-front me-2 text-primary"></i>
+                        <span class="nav-label">To'lov turlari (yangi)</span>
+                    </a>
+                </li>
                 @endif
                 <li class="nav-item">
                     <a href="{{ route('admin.audit') }}"
@@ -1211,15 +1225,8 @@ $.ajaxSetup({
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <div id="gKv-loading" class="d-flex align-items-center justify-content-center"
-           style="height:420px">
-        <div class="text-center text-muted">
-          <div class="spinner-border text-success mb-3" style="width:2.5rem;height:2.5rem"></div>
-          <div class="small">Kvitansiya yuklanmoqda...</div>
-        </div>
-      </div>
       <iframe id="gKv-frame" src="about:blank"
-              style="width:100%;height:0;border:none;display:none"
+              style="width:100%;height:520px;border:none;display:block"
               onload="gKvFrameYuklandi(this)">
       </iframe>
     </div>
@@ -1231,17 +1238,13 @@ $.ajaxSetup({
 var gKvModalObj = null;
 
 function kvitansiyaModalOch(url) {
-    var frame   = document.getElementById('gKv-frame');
-    var loading = document.getElementById('gKv-loading');
+    var frame = document.getElementById('gKv-frame');
     document.getElementById('gKv-new-tab').href = url;
-
-    loading.style.display = 'flex';
-    frame.style.height    = '0';
-    frame.style.display   = 'none';
-
+    frame.style.height  = '520px';
+    frame.style.display = 'block';
+    frame.src = url;
     if (!gKvModalObj) gKvModalObj = new bootstrap.Modal(document.getElementById('kvitansiyaGlobalModal'));
     gKvModalObj.show();
-    frame.src = url;
 }
 
 // Flash xabar dagi tugma uchun
@@ -1249,11 +1252,6 @@ function flashKvitansiyaOch(url) { kvitansiyaModalOch(url); }
 
 function gKvFrameYuklandi(frame) {
     if (!frame.src || frame.src === 'about:blank') return;
-    try {
-        var doc = frame.contentDocument || frame.contentWindow.document;
-        var bar = doc.querySelector('.print-bar');
-        if (bar) bar.style.display = 'none';
-    } catch(e) {}
     var h = 620;
     try {
         var doc2 = frame.contentDocument || frame.contentWindow.document;
@@ -1261,7 +1259,6 @@ function gKvFrameYuklandi(frame) {
     } catch(e) {}
     frame.style.height  = h + 'px';
     frame.style.display = 'block';
-    document.getElementById('gKv-loading').style.display = 'none';
 }
 
 function gKvChopEt() {
@@ -1280,9 +1277,8 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.addEventListener('hidden.bs.modal', function() {
             var f = document.getElementById('gKv-frame');
             f.src = 'about:blank';
-            f.style.height  = '0';
-            f.style.display = 'none';
-            document.getElementById('gKv-loading').style.display = 'flex';
+            f.style.height  = '520px';
+            f.style.display = 'block';
         });
     }
 });

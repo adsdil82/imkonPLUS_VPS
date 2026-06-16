@@ -11,6 +11,8 @@ use App\Models\TulovTuri;
 use App\Models\Tovar;
 use App\Models\TovarGuruh;
 use App\Models\TovarKatalog;
+use App\Models\OmbordanChiqim;
+use App\Models\ChiqimTafsilot;
 use App\Services\TulovService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -94,13 +96,56 @@ class RegKreditController extends Controller
             // Tovarlarni saqlash
             foreach ($data['tovarlar'] as $tovar) {
                 Tovar::create([
-                    'reg_kredit_id' => $kredit->id,
-                    'nomi'          => $tovar['nomi'],
-                    'soni'          => $tovar['soni'],
-                    'narx'          => $tovar['narx'],
-                    'jami_narx'     => $tovar['soni'] * $tovar['narx'],
-                    'barkod'        => $tovar['barkod'] ?? null,
+                    'reg_kredit_id'   => $kredit->id,
+                    'nomi'            => $tovar['nomi'],
+                    'soni'            => $tovar['soni'],
+                    'narx'            => $tovar['narx'],
+                    'jami_narx'       => $tovar['soni'] * $tovar['narx'],
+                    'barkod'          => $tovar['barkod'] ?? null,
+                    'tovar_katalog_id'=> !empty($tovar['tovar_katalog_id']) ? (int)$tovar['tovar_katalog_id'] : null,
                 ]);
+            }
+
+            // Ombor: qoldiqi bor tovarlar uchun ombordan chiqim va qoldiq decrement
+            $katalogItems = collect($data['tovarlar'])
+                ->filter(fn($t) => !empty($t['tovar_katalog_id']));
+
+            if ($katalogItems->isNotEmpty()) {
+                // Qoldiq tekshiruvi
+                foreach ($katalogItems as $t) {
+                    $tk = TovarKatalog::find((int)$t['tovar_katalog_id']);
+                    if ($tk && $tk->qoldiq < $t['soni']) {
+                        throw new \Illuminate\Validation\ValidationException(
+                            validator([], []),
+                            back()->withErrors(["«{$tk->nomi}»: omborda faqat {$tk->qoldiq} {$tk->birlik} bor."])->withInput()
+                        );
+                    }
+                }
+
+                $chiqimJami = $katalogItems->sum(fn($t) => $t['soni'] * $t['narx']);
+
+                $chiqim = OmbordanChiqim::create([
+                    'filial_id'    => $kredit->filial_id,
+                    'ombor_id'     => 1,
+                    'shartnoma_id' => $kredit->id,
+                    'xodim_id'     => $user->id,
+                    'sana'         => $kredit->boshlanish_sana,
+                    'sabab'        => 'nasiya_sotish',
+                    'umumiy_summa' => $chiqimJami,
+                    'izoh'         => "Nasiya shartnoma #{$kredit->shartnoma_raqam}",
+                    'holat'        => 'tasdiqlangan',
+                ]);
+
+                foreach ($katalogItems as $t) {
+                    ChiqimTafsilot::create([
+                        'chiqim_id'  => $chiqim->id,
+                        'tovar_id'   => (int)$t['tovar_katalog_id'],
+                        'miqdor'     => $t['soni'],
+                        'narx'       => $t['narx'],
+                        'jami_summa' => $t['soni'] * $t['narx'],
+                    ]);
+                    TovarKatalog::find((int)$t['tovar_katalog_id'])->decrement('qoldiq', $t['soni']);
+                }
             }
 
             // To'lov grafikini avtomatik yaratish

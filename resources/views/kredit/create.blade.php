@@ -142,6 +142,7 @@
                                 <i class="bi bi-tv"></i><i class="bi bi-plus-lg" style="font-size:.65rem;vertical-align:super"></i>
                             </button>
                         </div>
+                        <input type="hidden" name="tovarlar[0][tovar_katalog_id]" class="tovar-katalog-id" value="">
                     </div>
                     <div class="col-sm-2">
                         <input type="number" name="tovarlar[0][soni]" class="form-control form-control-sm tovar-soni"
@@ -275,15 +276,16 @@
       </div>
 
       <div class="modal-footer py-2 justify-content-between">
-        <div>
+        <div class="d-flex align-items-center gap-2">
           @if(Auth::user()->isMenejerYoki())
           <a href="{{ route('mijozlar.create') }}" target="_blank"
              class="btn btn-sm btn-outline-success">
-            <i class="bi bi-person-plus me-1"></i>Yangi mijoz yaratish
+            <i class="bi bi-person-plus me-1"></i>Yangi mijoz
           </a>
           @endif
-          <small class="text-muted ms-2">
-            <i class="bi bi-hand-index me-1"></i>2 marta bosing — tanlash
+          <small class="text-muted">
+            <i class="bi bi-hand-index me-1"></i>2 marta bosing
+            &nbsp;|&nbsp; <span id="mijoz-modal-soni-hdr" class="fw-bold"></span>
           </small>
         </div>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Yopish</button>
@@ -459,6 +461,7 @@ function tovarQosh() {
                     <i class="bi bi-tv"></i><i class="bi bi-plus-lg" style="font-size:.65rem;vertical-align:super"></i>
                 </button>
             </div>
+            <input type="hidden" name="tovarlar[${i}][tovar_katalog_id]" class="tovar-katalog-id" value="">
         </div>
         <div class="col-sm-2">
             <input type="number" name="tovarlar[${i}][soni]"
@@ -510,12 +513,15 @@ function mijozModalOch() {
     document.getElementById('mijoz-modal-qidiruv').value = '';
     document.getElementById('mijoz-modal-jadval').classList.add('d-none');
     document.getElementById('mijoz-modal-empty').classList.add('d-none');
-    document.getElementById('mijoz-modal-hint').classList.remove('d-none');
+    document.getElementById('mijoz-modal-hint').classList.add('d-none');
     document.getElementById('mijoz-modal-tbody').innerHTML = '';
+    document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
     _mijozModal.show();
+    // Barcha mijozlarni avtomatik yuklash
     setTimeout(function() {
+        mijozQidirAjax('');
         document.getElementById('mijoz-modal-qidiruv').focus();
-    }, 400);
+    }, 300);
 }
 
 function mijozModalTanlash(row) {
@@ -536,15 +542,9 @@ document.addEventListener('DOMContentLoaded', function() {
     mqEl.addEventListener('input', function() {
         clearTimeout(_mijozTimer);
         var q = this.value.trim();
-        if (q.length < 2) {
-            document.getElementById('mijoz-modal-jadval').classList.add('d-none');
-            document.getElementById('mijoz-modal-empty').classList.add('d-none');
-            document.getElementById('mijoz-modal-hint').classList.remove('d-none');
-            document.getElementById('mijoz-modal-tbody').innerHTML = '';
-            return;
-        }
         document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
-        _mijozTimer = setTimeout(function() { mijozQidirAjax(q); }, 200);
+        document.getElementById('mijoz-modal-hint').classList.add('d-none');
+        _mijozTimer = setTimeout(function() { mijozQidirAjax(q); }, 250);
     });
 
     mqEl.addEventListener('keydown', function(e) {
@@ -559,10 +559,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Darhol qidiruv (timer kutmasdan)
             clearTimeout(_mijozTimer);
             var q = mqEl.value.trim();
-            if (q.length >= 2) {
-                document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
-                mijozQidirAjax(q);
-            }
+            document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
+            mijozQidirAjax(q);
         }
     });
 });
@@ -582,11 +580,15 @@ function mijozQidirAjax(q) {
             if (data.length === 0) {
                 jadval.classList.add('d-none');
                 empty.classList.remove('d-none');
+                if (empty.querySelector('div')) empty.querySelector('div').textContent = 'Mijoz topilmadi';
                 tbody.innerHTML = '';
                 return;
             }
             empty.classList.add('d-none');
             jadval.classList.remove('d-none');
+            // Sarlavhaga soni ko'rsatish
+            var hdr = document.getElementById('mijoz-modal-soni-hdr');
+            if (hdr) hdr.textContent = data.length + (data.length >= 50 ? ' ta (birinchi 50 ta)' : ' ta topildi');
 
             tbody.innerHTML = data.map(function(m) {
                 var badge = m.holat === 'faol'
@@ -607,8 +609,12 @@ function mijozQidirAjax(q) {
                     '</tr>';
             }).join('');
         })
-        .fail(function() {
+        .fail(function(xhr, status, err) {
             document.getElementById('mijoz-modal-spinner').classList.add('d-none');
+            document.getElementById('mijoz-modal-hint').classList.add('d-none');
+            var empty = document.getElementById('mijoz-modal-empty');
+            empty.classList.remove('d-none');
+            empty.querySelector('div').textContent = 'Xatolik yuz berdi. Sahifani yangilang.';
         });
 }
 
@@ -623,6 +629,8 @@ function tovarModalOch(btn) {
         _tovarModal = new bootstrap.Modal(document.getElementById('tovarIzlashModal'));
     }
     document.getElementById('tovar-modal-qidiruv').value = '';
+    // Avvalgi highlight larni tozalash
+    document.querySelectorAll('.tovar-modal-qator').forEach(function(r){ r.classList.remove('table-success'); });
     tovarGuruhFilter(0, document.querySelector('#tovar-guruh-tablar button[data-guruh="0"]'));
     _tovarModal.show();
     setTimeout(function() {
@@ -635,7 +643,11 @@ function tovarModalTanlash(tr) {
     _activeTovarRow.find('.tovar-nomi-inp').val(tr.dataset.nomi);
     _activeTovarRow.find('.tovar-narx').val(tr.dataset.narx).trigger('input');
     _activeTovarRow.find('.tovar-soni').val(1).trigger('input');
+    _activeTovarRow.find('.tovar-katalog-id').val(tr.dataset.id);
     tovarJamiHisoblash(_activeTovarRow.find('.tovar-soni')[0]);
+    // Tanlangan qatorni highlight qilish
+    document.querySelectorAll('.tovar-modal-qator').forEach(function(r){ r.classList.remove('table-success'); });
+    tr.classList.add('table-success');
     if (_tovarModal) _tovarModal.hide();
     setTimeout(function() {
         _activeTovarRow.find('.tovar-soni').focus();

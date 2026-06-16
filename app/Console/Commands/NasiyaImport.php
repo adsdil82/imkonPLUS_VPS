@@ -14,15 +14,18 @@ use Illuminate\Support\Facades\Schema;
  *   php artisan nasiya:import {bosqich}
  *
  * Bosqichlar:
- *   filiallar      — Filiallarni seed qilish (seederdan chaqiriladi)
- *   tulov-turlari  — To'lov turlarini import qilish
- *   mijozlar       — Mijozlarni import qilish (mijoz_mysql.sql kerak)
- *   kreditlar      — Shartnomalarni import qilish (reg_kredit_mysql.sql kerak)
- *   tovarlar       — Tovarlarni import qilish (ch_kt_tv_mysql.sql kerak)
- *   grafik         — To'lov grafikini import qilish (grafik_mysql.sql kerak)
- *   tulovlar       — To'lovlarni import qilish (tulov_kt_mysql.sql kerak)
- *   oldin-tulovlar — Oldindan to'lovlarni import qilish (tulov_oldindan_KT_mysql.sql kerak)
- *   hammasi        — Barcha bosqichlarni ketma-ket bajarish
+ *   filiallar        — Filiallarni seed qilish (seederdan chaqiriladi)
+ *   tulov-turlari    — To'lov turlarini import qilish
+ *   mijozlar         — Mijozlarni import qilish (mijoz_mysql.sql kerak)
+ *   kreditlar        — Shartnomalarni import qilish (reg_kredit_mysql.sql kerak)
+ *   tovarlar         — Tovarlarni import qilish (ch_kt_tv_mysql.sql kerak)
+ *   grafik           — To'lov grafikini import qilish (grafik_mysql.sql kerak)
+ *   tulovlar         — To'lovlarni import qilish (tulov_kt_mysql.sql kerak)
+ *   oldin-tulovlar   — Oldindan to'lovlarni import qilish (tulov_oldindan_KT_mysql.sql kerak)
+ *   taminotchilar    — Ta'minotchilarni import qilish (temp_taminotchi kerak)
+ *   taminot-kirimlar — Ta'minotdan kirimlarni import qilish (temp_taminot_kirim, temp_taminot_kirim_qator kerak)
+ *   harajatlar       — Umumiy xarajatlarni import qilish (temp_harajat kerak)
+ *   hammasi          — Barcha bosqichlarni ketma-ket bajarish
  *
  * SQL fayllar import qilish tartibi:
  *   1. phpMyAdmin yoki mysql CLI orqali SQL fayllarni temp_* nomli jadvalga import qiling
@@ -35,7 +38,7 @@ use Illuminate\Support\Facades\Schema;
 class NasiyaImport extends Command
 {
     protected $signature = 'nasiya:import
-                            {bosqich : filiallar|tulov-turlari|mijozlar|kreditlar|tovarlar|grafik|tulovlar|oldin-tulovlar|hammasi}
+                            {bosqich : filiallar|tulov-turlari|mijozlar|kreditlar|tovarlar|grafik|tulovlar|oldin-tulovlar|taminotchilar|taminot-kirimlar|harajatlar|hammasi}
                             {--xodim-id=1 : Import paytida ishlatiluvchi xodim ID si}
                             {--fresh : Jadvaldan avval tozalash (truncate)}';
 
@@ -56,16 +59,19 @@ class NasiyaImport extends Command
         $this->newLine();
 
         return match($bosqich) {
-            'filiallar'      => $this->filiallarImport(),
-            'tulov-turlari'  => $this->tulovTurlariImport(),
-            'mijozlar'       => $this->mijozlarImport($fresh),
-            'kreditlar'      => $this->kreditlarImport($xodimId, $fresh),
-            'tovarlar'       => $this->tovarlarImport($fresh),
-            'grafik'         => $this->grafikImport($fresh),
-            'tulovlar'       => $this->tulovlarImport($xodimId, $fresh),
-            'oldin-tulovlar' => $this->oldinTulovlarImport($xodimId, $fresh),
-            'hammasi'        => $this->hammasiniImport($xodimId),
-            default          => $this->nomaluumBosqich($bosqich),
+            'filiallar'        => $this->filiallarImport(),
+            'tulov-turlari'    => $this->tulovTurlariImport(),
+            'mijozlar'         => $this->mijozlarImport($fresh),
+            'kreditlar'        => $this->kreditlarImport($xodimId, $fresh),
+            'tovarlar'         => $this->tovarlarImport($fresh),
+            'grafik'           => $this->grafikImport($fresh),
+            'tulovlar'         => $this->tulovlarImport($xodimId, $fresh),
+            'oldin-tulovlar'   => $this->oldinTulovlarImport($xodimId, $fresh),
+            'taminotchilar'    => $this->taminotchilarImport($fresh),
+            'taminot-kirimlar' => $this->taminotKirimlarImport($xodimId, $fresh),
+            'harajatlar'       => $this->harajatlarImport($xodimId, $fresh),
+            'hammasi'          => $this->hammasiniImport($xodimId),
+            default            => $this->nomaluumBosqich($bosqich),
         };
     }
 
@@ -258,6 +264,81 @@ class NasiyaImport extends Command
         return self::SUCCESS;
     }
 
+    private function taminotchilarImport(bool $fresh = false): int
+    {
+        if (!$this->jadvalBorMi('temp_taminotchi')) {
+            $this->error('temp_taminotchi jadvali topilmadi!');
+            return self::FAILURE;
+        }
+
+        if ($fresh && $this->confirm('Ta\'minotchilar jadvalini tozalaymizmi?')) {
+            DB::table('taminotchilar')->truncate();
+        }
+
+        $this->info('Ta\'minotchilar import qilinmoqda...');
+        $count = 0;
+
+        $this->importService->taminotchilarImport(
+            DB::table('temp_taminotchi')->cursor(),
+            $count
+        );
+
+        $this->success("Ta'minotchilar import qilindi: {$count} ta");
+        return self::SUCCESS;
+    }
+
+    private function taminotKirimlarImport(int $xodimId, bool $fresh = false): int
+    {
+        if (!$this->jadvalBorMi('temp_taminot_kirim') || !$this->jadvalBorMi('temp_taminot_kirim_qator')) {
+            $this->error('temp_taminot_kirim yoki temp_taminot_kirim_qator jadvali topilmadi!');
+            return self::FAILURE;
+        }
+
+        if ($fresh && $this->confirm('Ta\'minot kirimlari jadvallarini tozalaymizmi?')) {
+            DB::table('taminot_kirim_qatorlar')->truncate();
+            DB::table('taminot_kirimlar')->truncate();
+        }
+
+        $this->info('Ta\'minot kirimlari import qilinmoqda...');
+        $count = 0;
+        $qatorCount = 0;
+
+        $this->importService->taminotKirimlarImport(
+            DB::table('temp_taminot_kirim')->cursor(),
+            DB::table('temp_taminot_kirim_qator')->cursor(),
+            $xodimId,
+            $count,
+            $qatorCount
+        );
+
+        $this->success("Ta'minot kirimlari import qilindi: {$count} ta ({$qatorCount} qator)");
+        return self::SUCCESS;
+    }
+
+    private function harajatlarImport(int $xodimId, bool $fresh = false): int
+    {
+        if (!$this->jadvalBorMi('temp_harajat')) {
+            $this->error('temp_harajat jadvali topilmadi!');
+            return self::FAILURE;
+        }
+
+        if ($fresh && $this->confirm('Harajatlar jadvalini tozalaymizmi?')) {
+            DB::table('harajatlar')->truncate();
+        }
+
+        $this->info('Harajatlar import qilinmoqda...');
+        $count = 0;
+
+        $this->importService->harajatlarImport(
+            DB::table('temp_harajat')->cursor(),
+            $xodimId,
+            $count
+        );
+
+        $this->success("Harajatlar import qilindi: {$count} ta");
+        return self::SUCCESS;
+    }
+
     private function hammasiniImport(int $xodimId): int
     {
         $this->warn('BARCHA BOSQICHLAR KETMA-KET BAJARILADI!');
@@ -274,6 +355,9 @@ class NasiyaImport extends Command
             'tulovlar',       // tulov-turlari uchun temp_tulov_kt kerak — avval tulovlar import qilinadi
             'tulov-turlari',  // temp_tulov_kt dan noyob nomlarni oladi
             'oldin-tulovlar',
+            'taminotchilar',
+            'taminot-kirimlar',
+            'harajatlar',
         ];
 
         foreach ($bosqichlar as $bosqich) {
@@ -310,7 +394,7 @@ class NasiyaImport extends Command
     private function nomaluumBosqich(string $bosqich): int
     {
         $this->error("Noma'lum bosqich: {$bosqich}");
-        $this->line('Mavjud bosqichlar: filiallar, tulov-turlari, mijozlar, kreditlar, tovarlar, grafik, tulovlar, oldin-tulovlar, hammasi');
+        $this->line('Mavjud bosqichlar: filiallar, tulov-turlari, mijozlar, kreditlar, tovarlar, grafik, tulovlar, oldin-tulovlar, taminotchilar, taminot-kirimlar, harajatlar, hammasi');
         return self::FAILURE;
     }
 }

@@ -2,316 +2,321 @@
 <html lang="uz">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kvitansiya #{{ $tulov->kvitansiya_raqam ?? ('KO-' . str_pad($tulov->id, 6, '0', STR_PAD_LEFT)) }}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kvitansiya #{{ $tulov->id }}</title>
 <style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body { font-family: 'Times New Roman', Times, serif; font-size: 11pt; color: #000; background: #fff; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Times New Roman', Times, serif; font-size:10pt; color:#000; background:#fff; }
 
-@media screen {
-    body { background: #d0d0d0; padding: 16px; }
-    .page-wrap { max-width: 290mm; margin: 0 auto; background: #fff; box-shadow: 0 4px 20px rgba(0,0,0,.2); }
-}
-@media print {
-    body { background: #fff; margin: 0; padding: 0; }
-    .no-print { display: none !important; }
-    @page { size: A4 landscape; margin: 7mm 8mm; }
-    .page-wrap { width: 100%; box-shadow: none; }
-}
+  /* === NAMUNA suv belgisi === */
+  .namuna-bg {
+    position:fixed; top:0; left:0; width:100%; height:100%;
+    display:flex; align-items:center; justify-content:center;
+    pointer-events:none; z-index:0;
+  }
+  .namuna-bg span {
+    font-size:96pt; font-weight:900; color:#e00;
+    opacity:0.12; transform:rotate(-35deg);
+    white-space:nowrap; letter-spacing:8px;
+    font-family: Arial, sans-serif;
+  }
 
-/* ── Print bar ─────────────────────────────── */
-.print-bar {
-    background: #1a3a2a; color: #fff; padding: 10px 20px;
-    display: flex; align-items: center; gap: 12px;
-}
-.btn-print {
-    background: #2d6a4f; color: #fff; border: 2px solid #51cf66;
-    padding: 7px 22px; border-radius: 6px; font-size: 11pt;
-    cursor: pointer; font-weight: bold;
-}
-.btn-print:hover { background: #1a3a2a; }
-.btn-back {
-    background: transparent; color: #aaa; border: 1px solid #555;
-    padding: 7px 16px; border-radius: 6px; font-size: 10pt;
-    text-decoration: none; display: inline-block;
-}
+  /* === ASOSIY TUZILMA === */
+  .varaq {
+    position:relative; z-index:1;
+    width:100%; display:flex; flex-direction:row; min-height:130mm;
+  }
 
-/* ── Ikkita ustun ───────────────────────────── */
-.yarmi-wrap {
-    display: flex;
-}
-.yarmi {
-    width: 50%;
-    padding: 8mm 7mm 6mm 7mm;
-    position: relative;
-}
-.yarmi-kassir {
-    border-right: 1.5px dashed #888;
-}
+  /* === KASSIR (60%) === */
+  .yarmi-kassir {
+    width:60%;
+    padding:5mm 5mm 5mm 15mm;   /* chap 15mm — tiklash uchun otstup */
+    border-right:2px dashed #666;
+  }
 
-/* ── Makas chizig'i ─────────────────────────── */
-.makas {
-    position: absolute; right: -11px; top: 50%;
-    transform: translateY(-50%) rotate(90deg);
-    font-size: 18pt; color: #aaa; z-index: 2;
-}
+  /* === MIJOZ (40%) === */
+  .yarmi-talon {
+    width:40%;
+    padding:5mm 4mm 5mm 6mm;
+  }
 
-/* ── Kompaniya ──────────────────────────────── */
-.komp-nomi {
-    text-align: center; font-size: 10.5pt; font-weight: bold;
-    text-transform: uppercase; letter-spacing: .5px;
-    border-bottom: 1.5px solid #000;
-    padding-bottom: 3px; margin-bottom: 3px;
-}
-.komp-info {
-    text-align: center; font-size: 7.5pt; color: #444; margin-bottom: 5px; line-height: 1.4;
-}
+  /* --- Sarlavhalar --- */
+  .tashkilot { text-align:center; font-size:9pt; font-weight:bold; line-height:1.3; margin-bottom:1.5mm; }
+  .tashkilot-kichik { font-size:7.5pt; font-weight:normal; }
+  .nom { text-align:center; font-size:12pt; font-weight:bold; margin-bottom:1mm; }
+  .raqam { text-align:center; font-size:8.5pt; margin-bottom:2.5mm; }
 
-/* ── Orden sarlavha ─────────────────────────── */
-.orden-title {
-    text-align: center; font-size: 11.5pt; font-weight: bold;
-    text-transform: uppercase; letter-spacing: 1.5px; margin: 6px 0 1px;
-}
-.orden-no {
-    text-align: center; font-size: 9pt; color: #555; margin-bottom: 7px;
-}
+  /* --- Info jadval --- */
+  table.info { width:100%; border-collapse:collapse; margin-bottom:2.5mm; font-size:9pt; }
+  table.info td { padding:1mm 1.5mm; vertical-align:top; }
+  table.info td:first-child { width:36%; font-weight:bold; white-space:nowrap; }
+  table.info td:last-child { border-bottom:0.5pt solid #bbb; }
 
-/* ── Ma'lumotlar jadvali ────────────────────── */
-.data-table { width: 100%; border-collapse: collapse; }
-.data-table td { padding: 2.5px 2px; vertical-align: bottom; font-size: 9.5pt; }
-.data-table .lbl { white-space: nowrap; color: #555; width: 1%; font-size: 8.5pt; }
-.data-table .val {
-    border-bottom: 1px solid #666; padding-left: 4px;
-    padding-bottom: 1px; font-weight: bold;
-}
+  /* --- SUMMA QUTISI 1: to'langan (ushbu to'lov) --- */
+  .summa-box-1 {
+    border:1.5pt solid #000; padding:2.5mm 3mm; margin-bottom:2mm; text-align:center;
+  }
+  .summa-box-1 .s-label { font-size:7.5pt; color:#555; margin-bottom:1mm; }
+  .summa-box-1 .s-big   { font-size:18pt; font-weight:bold; line-height:1.1; }
+  .summa-box-1 .s-som   { font-size:8.5pt; color:#444; margin-bottom:1mm; }
+  .summa-box-1 .s-words { font-size:8pt; font-style:italic; color:#333;
+                           border-top:0.5pt solid #ccc; padding-top:1.5mm; margin-top:1mm; }
 
-/* ── Summa quticha ──────────────────────────── */
-.summa-box {
-    text-align: center; font-size: 13.5pt; font-weight: bold;
-    border: 2px solid #000; padding: 5px 8px;
-    margin: 7px 0 3px; letter-spacing: .5px;
-}
-.summa-yozuv {
-    font-size: 8.5pt; color: #333; font-style: italic;
-    border-bottom: 1px solid #bbb; padding-bottom: 2px; margin-bottom: 7px;
-    line-height: 1.4;
-}
+  /* --- SUMMA QUTISI 2: jami hisoblar --- */
+  .summa-box-2 {
+    border:1.5pt solid #000; padding:2mm 3mm; margin-bottom:2.5mm;
+  }
+  .summa-box-2 .r { display:flex; justify-content:space-between; align-items:baseline;
+                     padding:1mm 0; border-bottom:0.3pt solid #ddd; font-size:8.5pt; }
+  .summa-box-2 .r:last-child { border-bottom:none; }
+  .summa-box-2 .r .lbl { color:#444; }
+  .summa-box-2 .r .val { font-weight:bold; }
+  .summa-box-2 .r.total .lbl { font-weight:bold; }
+  .summa-box-2 .r.total .val { font-size:10pt; }
 
-/* ── Imzo qatorlari ─────────────────────────── */
-.imzo-wrap {
-    display: flex; gap: 6px; margin-top: 8px;
-}
-.imzo-blok { flex: 1; text-align: center; }
-.imzo-blok .il { font-size: 7.5pt; color: #555; }
-.imzo-blok .ic { border-top: 1px solid #555; margin: 18px 4px 2px; }
-.imzo-blok .in { font-size: 7pt; }
+  /* --- Imzolar --- */
+  .imzolar { margin-top:2mm; }
+  .imzo-row { display:flex; justify-content:space-between; margin-bottom:3.5mm; font-size:8.5pt; }
+  .imzo-item { flex:1; margin-right:3mm; }
+  .imzo-item:last-child { margin-right:0; }
+  .imzo-label { margin-bottom:1mm; }
+  .imzo-chiziq { border-bottom:0.5pt solid #000; height:6mm; margin-bottom:0.5mm; }
+  .imzo-fio { font-size:7pt; color:#555; text-align:center; }
 
-/* ── Muhr ────────────────────────────────────── */
-.muhr {
-    float: right; width: 52px; height: 52px;
-    border: 1px dashed #bbb; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 6.5pt; color: #bbb; text-align: center;
-    margin: -22px 0 0 0;
-}
+  /* --- Muhr --- */
+  .muhr-wrap { display:flex; align-items:center; gap:3mm; margin-top:1mm; }
+  .muhr { width:20mm; height:20mm; border:1.5pt solid #aaa; border-radius:50%;
+          display:inline-flex; align-items:center; justify-content:center;
+          font-size:6.5pt; color:#888; text-align:center; flex-shrink:0; }
 
-/* ── Talon tepa yozuv ───────────────────────── */
-.talon-head {
-    text-align: center; font-size: 8pt; font-weight: bold;
-    color: #666; border-bottom: 1px solid #aaa;
-    padding-bottom: 3px; margin-bottom: 4px;
-    text-transform: uppercase; letter-spacing: 1.5px;
-}
+  /* --- Footer --- */
+  .nusxa-belgi { margin-top:2mm; text-align:center; font-size:7pt; color:#666;
+                  font-style:italic; border-top:0.5pt solid #ccc; padding-top:1.5mm; }
 
-/* ── Pastki izoh ────────────────────────────── */
-.pastki {
-    font-size: 6.5pt; color: #888; text-align: center;
-    margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 4px;
-}
+  /* === TALON sarlavha === */
+  .talon-nom { text-align:center; font-size:10pt; font-weight:bold; margin-bottom:1mm;
+               border:1.5pt solid #000; padding:1.5mm; }
+  .talon-tashkilot { text-align:center; font-size:8pt; margin-bottom:0.5mm; }
+  .talon-raqam { text-align:center; font-size:8.5pt; margin-bottom:2mm; color:#333; }
+
+  table.talon-info { width:100%; border-collapse:collapse; font-size:8pt; margin-bottom:2mm; }
+  table.talon-info td { padding:1mm; vertical-align:top; }
+  table.talon-info td:first-child { font-weight:bold; width:42%; }
+  table.talon-info td:last-child { border-bottom:0.5pt solid #bbb; }
+
+  /* Talon summa 1 */
+  .talon-s1 { border:1.5pt solid #000; padding:2mm; margin-bottom:2mm; text-align:center; }
+  .talon-s1 .ts-label { font-size:7.5pt; color:#555; }
+  .talon-s1 .ts-val   { font-size:16pt; font-weight:bold; margin:0.5mm 0; line-height:1.1; }
+  .talon-s1 .ts-som   { font-size:8pt; color:#555; }
+  .talon-s1 .ts-words { font-size:7.5pt; font-style:italic; color:#333;
+                         border-top:0.5pt solid #ccc; padding-top:1mm; margin-top:1mm; }
+
+  /* Talon summa 2 */
+  .talon-s2 { border:1.5pt solid #000; padding:2mm; margin-bottom:2mm; }
+  .talon-s2 .r { display:flex; justify-content:space-between; align-items:baseline;
+                  padding:0.8mm 0; border-bottom:0.3pt solid #ddd; font-size:8pt; }
+  .talon-s2 .r:last-child { border-bottom:none; }
+  .talon-s2 .r .lbl { color:#444; }
+  .talon-s2 .r .val  { font-weight:bold; }
+  .talon-s2 .r.total .lbl { font-weight:bold; }
+  .talon-s2 .r.total .val  { font-size:9.5pt; }
+
+  .talon-imzo { font-size:8pt; margin-bottom:2.5mm; }
+  .talon-imzo .imzo-chiziq { border-bottom:0.5pt solid #000; height:6mm; margin-bottom:0.5mm; }
+  .talon-imzo .imzo-fio { font-size:7pt; color:#555; text-align:center; }
+  .talon-muhr-wrap { display:flex; align-items:center; gap:2mm; margin-bottom:2.5mm; }
+  .talon-muhr { width:16mm; height:16mm; border:1.5pt solid #aaa; border-radius:50%;
+                display:inline-flex; align-items:center; justify-content:center;
+                font-size:6pt; color:#888; text-align:center; flex-shrink:0; }
+
+  .talon-nusxa { text-align:center; font-size:7pt; color:#666; font-style:italic;
+                  border-top:0.5pt solid #ccc; padding-top:1.5mm; margin-top:2mm; font-weight:bold; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 5mm 6mm; }
+    body { font-size:10pt; }
+    .no-print { display:none !important; }
+    .varaq { page-break-inside: avoid; }
+  }
 </style>
 </head>
 <body>
 
-{{-- ── Chop etish paneli ─────────────────────────────── --}}
-<div class="print-bar no-print">
-    <button class="btn-print" onclick="window.print()">
-        🖨️ &nbsp;Chop etish
-    </button>
-    <a class="btn-back" href="{{ route('kreditlar.show', $kredit) }}">← Orqaga</a>
-    <span style="color:#888;font-size:9pt;margin-left:8px">
-        A4 Landscape • Chap = Kassir nusxasi &nbsp;|&nbsp; O'ng = Mijoz taloni
-    </span>
-</div>
-
 @php
-$kvNo        = $tulov->kvitansiya_raqam ?? ('KO-' . str_pad($tulov->id, 6, '0', STR_PAD_LEFT));
-$sana        = $tulov->tolov_sana ? $tulov->tolov_sana->format('d.m.Y') : now()->format('d.m.Y');
-$summa       = number_format((float)$tulov->summa, 2, '.', ' ');
-$summaInt    = number_format((float)$tulov->summa, 0, '.', ' ');
-$mijozIsm    = ($kredit->mijoz->familiya ?? '') . ' ' . ($kredit->mijoz->ism ?? '');
-$asoslar     = $kredit->shartnoma_raqam . ' shartnomasi bo\'yicha nasiya to\'lovi';
-$kassir      = $tulov->xodim->ism_familiya ?? '';
-$tulovTuri   = $tulov->tulovTuri->nomi ?? '';
-$qoldiq      = number_format((float)$kredit->qoldiq_qarz, 0, '.', ' ');
-$kreditSumma = number_format((float)$kredit->kredit_summa, 0, '.', ' ');
+  $kredit    = $tulov->kredit ?? null;
+  $mijoz     = $kredit->mijoz ?? null;
+  $tulovSana = $tulov->tulov_sana
+               ? \Carbon\Carbon::parse($tulov->tulov_sana)
+               : now();
+  $sana      = $tulovSana->format('d.m.Y');
+  $namuna    = $tulovSana->startOfDay()->lt(now()->startOfDay());
 
-$kompNomi     = $soz['kompaniya_nomi']    ?? ($soz['brand_nomi'] ?? 'NasiyaPro');
-$kompManzil   = $soz['kompaniya_manzil']  ?? '';
-$kompTelefon  = $soz['kompaniya_telefon'] ?? '';
-$kompINN      = $soz['kompaniya_inn']     ?? '';
-$kompHisob    = $soz['kompaniya_hisob']   ?? '';
-$kompBank     = $soz['kompaniya_bank']    ?? '';
-$kompDirektor = $soz['kompaniya_direktor'] ?? '';
+  $sum          = number_format($tulov->summa, 0, '.', ' ');
+  $shartnoma    = $kredit->shartnoma_raqam ?? '—';
+  $mijozFio     = $mijoz
+    ? trim(($mijoz->familiya ?? '').' '.($mijoz->ism ?? '').' '.($mijoz->otasining_ismi ?? ''))
+    : '—';
+  $tulovTuri    = $tulov->tulovTuri->nomi ?? 'Naqd';
+
+  $nasiySumma   = $kredit ? number_format($kredit->kredit_summa,     0, '.', ' ') : '—';
+  $oldinTolov   = $kredit ? number_format($kredit->boshlangich_tolov, 0, '.', ' ') : '—';
+  $jamiTolangan = $kredit ? number_format($kredit->tolov_qilingan,    0, '.', ' ') : '—';
+  $qoldiq       = number_format($qoldiqSana, 0, '.', ' ');
 @endphp
 
-<div class="page-wrap">
-<div class="yarmi-wrap">
+@if($namuna)
+<div class="namuna-bg"><span>NAMUNA</span></div>
+@endif
 
-    {{-- ═══════════════════════════════════════════════════
-         CHAP — KASSIR (Buxgalteriya) nusxasi
-    ════════════════════════════════════════════════════ --}}
-    <div class="yarmi yarmi-kassir">
+<div class="varaq">
 
-        <div class="komp-nomi">{{ $kompNomi }}</div>
-        <div class="komp-info">
-            @if($kompManzil){{ $kompManzil }}@endif
-            @if($kompTelefon) &nbsp;|&nbsp; {{ $kompTelefon }}@endif
-            @if($kompINN)<br>INN: {{ $kompINN }} &nbsp;|&nbsp; Hisob: {{ $kompHisob }}@endif
-            @if($kompBank)<br>{{ $kompBank }}@endif
-        </div>
+  <!-- ====== CHAP 60% — KASSIR NUSXASI ====== -->
+  <div class="yarmi-kassir">
 
-        <div class="orden-title">Kassa Kirim Orderi</div>
-        <div class="orden-no">
-            № &nbsp;<strong>{{ $kvNo }}</strong>
-            &emsp;&emsp;
-            {{ $sana }}
-        </div>
-
-        <table class="data-table">
-            <tr>
-                <td class="lbl">Qabul qilindi:</td>
-                <td class="val">{{ $mijozIsm }}</td>
-            </tr>
-            <tr>
-                <td class="lbl">Asosi:</td>
-                <td class="val">{{ $asoslar }}</td>
-            </tr>
-            <tr>
-                <td class="lbl">To'lov turi:</td>
-                <td class="val">{{ $tulovTuri }}</td>
-            </tr>
-            @if($tulov->izoh)
-            <tr>
-                <td class="lbl">Izoh:</td>
-                <td class="val">{{ $tulov->izoh }}</td>
-            </tr>
-            @endif
-        </table>
-
-        <div class="summa-box">{{ $summa }} so'm</div>
-        <div class="summa-yozuv">
-            Yozuvda: {{ ucfirst($summaSoz) }} 00 tiyin
-        </div>
-
-        <div style="overflow:hidden">
-            <div class="muhr">Muhr<br>joyi</div>
-            <div class="imzo-wrap">
-                <div class="imzo-blok">
-                    <div class="il">Kassir</div>
-                    <div class="ic"></div>
-                    <div class="in">{{ $kassir }}</div>
-                </div>
-                <div class="imzo-blok">
-                    <div class="il">Direktor</div>
-                    <div class="ic"></div>
-                    <div class="in">{{ $kompDirektor }}</div>
-                </div>
-                <div class="imzo-blok">
-                    <div class="il">Buxgalter</div>
-                    <div class="ic"></div>
-                    <div class="in">&nbsp;</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="pastki">✂ &nbsp; Kassir nusxasi — Buxgalteriyada saqlanadi</div>
-
-        <div class="makas no-print">✂</div>
+    <div class="tashkilot">
+      IMKONPLUS MChJ<br>
+      <span class="tashkilot-kichik">Nasiya savdo tizimi</span>
+    </div>
+    <div class="nom">KASSA KIRIM ORDERI</div>
+    <div class="raqam">
+      № <strong>{{ $tulov->id }}</strong> &nbsp;|&nbsp; Sana: <strong>{{ $sana }}</strong>
     </div>
 
-    {{-- ═══════════════════════════════════════════════════
-         O'NG — MIJOZ taloni
-    ════════════════════════════════════════════════════ --}}
-    <div class="yarmi">
+    <table class="info">
+      <tr><td>Shartnoma:</td><td>{{ $shartnoma }}</td></tr>
+      <tr><td>Mijoz:</td><td>{{ $mijozFio }}</td></tr>
+      @if($mijoz && $mijoz->telefon)
+      <tr><td>Telefon:</td><td>{{ $mijoz->telefon }}</td></tr>
+      @endif
+      <tr><td>To'lov turi:</td><td>{{ $tulovTuri }}</td></tr>
+      @if($tulov->izoh)
+      <tr><td>Izoh:</td><td>{{ $tulov->izoh }}</td></tr>
+      @endif
+    </table>
 
-        <div class="talon-head">Mijozga beriladigan talon</div>
-
-        <div class="komp-nomi">{{ $kompNomi }}</div>
-        <div class="komp-info">
-            @if($kompTelefon)Tel: {{ $kompTelefon }}@endif
-        </div>
-
-        <div class="orden-title" style="font-size:10.5pt">Kassa Kirim Orderi</div>
-        <div class="orden-no">
-            № &nbsp;<strong>{{ $kvNo }}</strong>
-            &emsp;&emsp;
-            {{ $sana }}
-        </div>
-
-        <table class="data-table">
-            <tr>
-                <td class="lbl">Mijoz:</td>
-                <td class="val">{{ $mijozIsm }}</td>
-            </tr>
-            <tr>
-                <td class="lbl">Shartnoma:</td>
-                <td class="val">{{ $kredit->shartnoma_raqam }}</td>
-            </tr>
-            <tr>
-                <td class="lbl">To'lov turi:</td>
-                <td class="val">{{ $tulovTuri }}</td>
-            </tr>
-            <tr>
-                <td class="lbl">Sana:</td>
-                <td class="val">{{ $sana }}</td>
-            </tr>
-        </table>
-
-        <div class="summa-box" style="font-size:16pt">{{ $summaInt }} so'm</div>
-        <div class="summa-yozuv">
-            {{ ucfirst($summaSoz) }} 00 tiyin
-        </div>
-
-        <table class="data-table" style="margin-top:6px">
-            <tr>
-                <td class="lbl">Qoldiq qarz:</td>
-                <td class="val" style="color:#c62828;font-size:9pt">{{ $qoldiq }} so'm</td>
-            </tr>
-            <tr>
-                <td class="lbl">Jami kredit:</td>
-                <td class="val" style="font-size:9pt">{{ $kreditSumma }} so'm</td>
-            </tr>
-        </table>
-
-        <div class="imzo-wrap" style="margin-top:14px">
-            <div class="imzo-blok">
-                <div class="il">Kassir imzosi</div>
-                <div class="ic"></div>
-                <div class="in">{{ $kassir }}</div>
-            </div>
-            <div class="imzo-blok" style="flex:2">
-                <div class="il">Mijoz imzosi</div>
-                <div class="ic"></div>
-                <div class="in">&nbsp;</div>
-            </div>
-        </div>
-
-        <div class="pastki">
-            ✂ &nbsp; Mijoz nusxasi — Saqlang! &nbsp;|&nbsp; {{ $kompNomi }}
-        </div>
+    {{-- QUTI 1: ushbu to'lov summasi --}}
+    <div class="summa-box-1">
+      <div class="s-label">To'langan summa (ushbu to'lov)</div>
+      <div class="s-big">{{ $sum }}</div>
+      <div class="s-som">so'm</div>
+      <div class="s-words">( {{ $summaSoz }} )</div>
     </div>
+
+    {{-- QUTI 2: jami hisoblar --}}
+    <div class="summa-box-2">
+      <div class="r">
+        <span class="lbl">Jami nasiya summa:</span>
+        <span class="val">{{ $nasiySumma }} so'm</span>
+      </div>
+      <div class="r">
+        <span class="lbl">Oldindan to'lov:</span>
+        <span class="val">{{ $oldinTolov }} so'm</span>
+      </div>
+      <div class="r">
+        <span class="lbl">Jami to'langan summa:</span>
+        <span class="val">{{ $jamiTolangan }} so'm</span>
+      </div>
+      <div class="r total">
+        <span class="lbl">Nasiya qoldiq summa:</span>
+        <span class="val">{{ $qoldiq }} so'm</span>
+      </div>
+    </div>
+
+    <div class="imzolar">
+      <div class="imzo-row">
+        <div class="imzo-item">
+          <div class="imzo-label">Kassir:</div>
+          <div class="imzo-chiziq"></div>
+          <div class="imzo-fio">imzo / F.I.O.</div>
+        </div>
+        <div class="imzo-item">
+          <div class="imzo-label">Direktor:</div>
+          <div class="imzo-chiziq"></div>
+          <div class="imzo-fio">imzo / F.I.O.</div>
+        </div>
+        <div class="imzo-item">
+          <div class="imzo-label">Buxgalter:</div>
+          <div class="imzo-chiziq"></div>
+          <div class="imzo-fio">imzo / F.I.O.</div>
+        </div>
+      </div>
+      <div class="muhr-wrap">
+        <div class="muhr">M.O.</div>
+        <span style="font-size:7pt;color:#777;">Muhr o'rni</span>
+      </div>
+    </div>
+
+    <div class="nusxa-belgi">Kassir nusxasi — Buxgalteriyada saqlanadi</div>
+  </div>
+
+  <!-- ====== O'NG 40% — MIJOZ KVITANSIYASI ====== -->
+  <div class="yarmi-talon">
+
+    <div class="talon-nom">Kvitansiya</div>
+    <div class="talon-tashkilot">IMKONPLUS MChJ</div>
+    <div class="talon-raqam">№ <strong>{{ $tulov->id }}</strong> &nbsp;|&nbsp; {{ $sana }}</div>
+
+    <table class="talon-info">
+      <tr><td>Shartnoma:</td><td>{{ $shartnoma }}</td></tr>
+      <tr><td>Mijoz:</td><td>{{ $mijozFio }}</td></tr>
+      <tr><td>To'lov turi:</td><td>{{ $tulovTuri }}</td></tr>
+    </table>
+
+    {{-- QUTI 1: ushbu to'lov --}}
+    <div class="talon-s1">
+      <div class="ts-label">To'langan summa</div>
+      <div class="ts-val">{{ $sum }}</div>
+      <div class="ts-som">so'm</div>
+      <div class="ts-words">( {{ $summaSoz }} )</div>
+    </div>
+
+    {{-- QUTI 2: jami hisoblar --}}
+    <div class="talon-s2">
+      <div class="r">
+        <span class="lbl">Jami nasiya summa:</span>
+        <span class="val">{{ $nasiySumma }} so'm</span>
+      </div>
+      <div class="r">
+        <span class="lbl">Oldindan to'lov:</span>
+        <span class="val">{{ $oldinTolov }} so'm</span>
+      </div>
+      <div class="r">
+        <span class="lbl">Jami to'langan:</span>
+        <span class="val">{{ $jamiTolangan }} so'm</span>
+      </div>
+      <div class="r total">
+        <span class="lbl">Nasiya qoldiq:</span>
+        <span class="val">{{ $qoldiq }} so'm</span>
+      </div>
+    </div>
+
+    <div class="talon-imzo">
+      <div class="imzo-label">Kassir:</div>
+      <div class="imzo-chiziq"></div>
+      <div class="imzo-fio">imzo / F.I.O.</div>
+    </div>
+
+    <div class="talon-muhr-wrap">
+      <div class="talon-muhr">M.O.</div>
+      <span style="font-size:7pt;color:#777;">Muhr o'rni</span>
+    </div>
+
+    <div class="talon-imzo">
+      <div class="imzo-label">Mijoz:</div>
+      <div class="imzo-chiziq"></div>
+      <div class="imzo-fio">imzo / F.I.O.</div>
+    </div>
+
+    <div class="talon-nusxa">Mijoz nusxasi — Saqlang!</div>
+  </div>
 
 </div>
+
+<div class="no-print" style="text-align:center;margin-top:5mm;">
+  <button onclick="window.print()" style="padding:4px 18px;font-size:9pt;cursor:pointer;">
+    Chop etish (Print)
+  </button>
 </div>
 
 </body>

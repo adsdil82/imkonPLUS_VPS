@@ -19,6 +19,7 @@ class Tovar extends Model implements Auditable
         'soni',
         'narx',
         'jami_narx',
+        'tovar_katalog_id',
         'barkod',
         'izoh',
     ];

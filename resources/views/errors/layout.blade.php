@@ -22,19 +22,32 @@
 </head>
 <body>
 @yield('content')
-
 <script>
-function nusxaOl() {
-    const matn = document.getElementById('xato-matn').innerText;
-    navigator.clipboard.writeText(matn).then(() => {
-        const btn = document.getElementById('nusxa-btn');
+function nusxaOl(btn) {
+    var matn = document.getElementById('xato-matn').innerText;
+    var origHtml = btn ? btn.innerHTML : '';
+    var origClass = btn ? btn.className : '';
+    function ok() {
+        if (!btn) return;
         btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Nusxalandi!';
-        btn.className = 'btn btn-success btn-sm';
-        setTimeout(() => {
-            btn.innerHTML = '<i class="bi bi-clipboard me-1"></i>Nusxa olish';
-            btn.className = 'btn btn-outline-light btn-sm';
-        }, 2000);
-    });
+        btn.className = 'btn btn-success';
+        setTimeout(function(){ btn.innerHTML = origHtml; btn.className = origClass; }, 2000);
+    }
+    function fallback() {
+        var ta = document.createElement('textarea');
+        ta.value = matn;
+        ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+        document.body.appendChild(ta);
+        ta.focus(); ta.select();
+        try { document.execCommand('copy'); ok(); }
+        catch(e) { alert('Nusxalash imkonsiz.'); }
+        document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(matn).then(ok).catch(fallback);
+    } else {
+        fallback();
+    }
 }
 </script>
 </body>

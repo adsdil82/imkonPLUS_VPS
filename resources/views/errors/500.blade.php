@@ -62,7 +62,7 @@
             <code class="text-warning">{{ $xatoNomi }}</code>
         </div>
         <div class="d-flex gap-2">
-            <button id="nusxa-btn" class="btn btn-outline-light btn-sm" onclick="nusxaOl()">
+            <button id="nusxa-btn" class="btn btn-outline-light btn-sm" onclick="nusxaOl(this)">
                 <i class="bi bi-clipboard me-1"></i>Nusxa olish
             </button>
             <a href="{{ url()->previous() }}" class="btn btn-outline-light btn-sm">
@@ -102,7 +102,7 @@
         <div class="stack-trace" id="xato-matn">{{ $nusxaMatn }}</div>
 
         <div class="mt-3 d-flex gap-2">
-            <button class="btn btn-danger" onclick="nusxaOl()">
+            <button class="btn btn-danger" onclick="nusxaOl(this)">
                 <i class="bi bi-clipboard me-1"></i>Xatoni nusxalash
             </button>
             <a href="/" class="btn btn-outline-secondary">

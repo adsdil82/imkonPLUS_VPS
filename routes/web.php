@@ -69,8 +69,8 @@ Route::middleware('auth')->group(function () {
             ->middleware('rol.check:admin,menejer')
             ->name('create');
         Route::post('/',          [MijozController::class, 'store'])->name('store');
+        Route::get('/ajax-qidiruv', [MijozController::class, 'ajaxQidiruv'])->name('ajax.qidiruv');
         Route::get('/{mijoz}',    [MijozController::class, 'show'])->name('show');
-        Route::get('/ajax-qidiruv',      [MijozController::class, 'ajaxQidiruv'])->name('ajax.qidiruv');
         Route::get('/{mijoz}/tahrirlash', [MijozController::class, 'edit'])
             ->middleware('rol.check:admin,menejer')
             ->name('edit');
@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function () {
             ->middleware('rol.check:admin,menejer')
             ->name('update');
         Route::get('/{kredit}/pdf', [RegKreditController::class, 'pdf'])->name('pdf');
+        Route::get('/{kredit}/hujjat/{tur}', [RegKreditController::class, 'hujjat'])->name('hujjat');
 
         // To'lovlar
         Route::get('/{kredit}/tulov',          [TulovController::class, 'create'])

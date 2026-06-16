@@ -21,6 +21,7 @@ class RegKreditRequest extends FormRequest
             'jami_summa'          => ['required', 'numeric', 'min:0'],
             'boshlangich_tolov'   => ['required', 'numeric', 'min:0'],
             'muddati_oy'          => ['required', 'integer', 'min:1', 'max:36'],
+            'tolov_kuni'          => ['required', 'integer', 'min:1', 'max:31'],
             'foiz_stavka'         => ['nullable', 'numeric', 'min:0', 'max:100'],
 
             // prepareForValidation() orqali hisoblanadigan maydonlar.

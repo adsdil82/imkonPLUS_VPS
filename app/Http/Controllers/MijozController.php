@@ -122,7 +122,7 @@ class MijozController extends Controller
             $mijozlar = Mijoz::with('filial:id,nomi,kod')
                 ->when($filialId, fn($qu) => $qu->where('filial_id', $filialId))
                 ->select(['id','filial_id','familiya','ism','otasining_ismi',
-                          'telefon','passport_seria','passport_raqam','holat'])
+                          'telefon','passport_seriya','passport_raqam','holat'])
                 ->orderBy('familiya')
                 ->limit(50)
                 ->get();
@@ -131,7 +131,7 @@ class MijozController extends Controller
                 'fio'      => trim($m->familiya . ' ' . $m->ism .
                               ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
                 'telefon'  => $m->telefon ?? '',
-                'passport' => trim(($m->passport_seria ?? '') . ' ' . ($m->passport_raqam ?? '')),
+                'passport' => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
                 'filial'   => $m->filial?->nomi ?? '',
                 'holat'    => $m->holat,
             ]));
@@ -153,7 +153,7 @@ class MijozController extends Controller
                     ->orWhere('telefon', 'LIKE', "%{$q}%")
                     ->orWhereRaw("REPLACE(telefon,' ','') LIKE ?",
                         ['%' . preg_replace('/\D/', '', $q) . '%'])
-                    ->orWhere('passport_seria', 'LIKE', "%{$q}%")
+                    ->orWhere('passport_seriya', 'LIKE', "%{$q}%")
                     ->orWhere('passport_raqam', 'LIKE', "%{$q}%");
 
                 // Lotincha transliteratsiya (foydalanuvchi kirilcha yozgan bo'lsa)
@@ -171,7 +171,7 @@ class MijozController extends Controller
                 }
             })
             ->select(['id','filial_id','familiya','ism','otasining_ismi',
-                      'telefon','passport_seria','passport_raqam','holat'])
+                      'telefon','passport_seriya','passport_raqam','holat'])
             ->orderBy('familiya')
             ->limit(40)
             ->get();
@@ -181,7 +181,7 @@ class MijozController extends Controller
             'fio'      => trim($m->familiya . ' ' . $m->ism .
                           ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
             'telefon'  => $m->telefon ?? '',
-            'passport' => trim(($m->passport_seria ?? '') . ' ' . ($m->passport_raqam ?? '')),
+            'passport' => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
             'filial'   => $m->filial?->nomi ?? '',
             'holat'    => $m->holat,
         ]));

@@ -195,16 +195,22 @@ class RegKreditController extends Controller
             abort(403);
         }
 
-        $kredit->load(['mijoz', 'tovarlar']);
+        $kredit->load(['mijoz', 'tovarlar', 'grafik']);
+
         $filiallar = Auth::user()->isAdmin()
             ? Filial::faol()->get()
             : Filial::where('id', $kredit->filial_id)->get();
 
-        return view('kredit.edit', compact('kredit', 'filiallar'));
+        $tovarGuruhlar = TovarGuruh::with([
+            'tovarlar' => fn($q) => $q->faol()->where('qoldiq', '>', 0)->orderBy('nomi')->select(['id','guruh_id','nomi','qoldiq','sotish_narx','birlik'])
+        ])->whereHas('tovarlar', fn($q) => $q->faol()->where('qoldiq', '>', 0))
+          ->orderBy('nomi')->get(['id','nomi']);
+
+        return view('kredit.edit', compact('kredit', 'filiallar', 'tovarGuruhlar'));
     }
 
     /** Shartnomani yangilash */
-    public function update(Request $request, RegKredit $kredit)
+    public function update(RegKreditRequest $request, RegKredit $kredit)
     {
         $this->filialRuxsatTekshir($kredit->filial_id);
 
@@ -212,25 +218,58 @@ class RegKreditController extends Controller
             abort(403);
         }
 
-        $request->validate([
-            'sabab'         => ['required', 'string', 'min:5'],
-            'kafil_ism'     => ['nullable', 'string', 'max:200'],
-            'kafil_telefon' => ['nullable', 'string', 'max:50'],
-            'kafil_manzil'  => ['nullable', 'string'],
-            'izoh'          => ['nullable', 'string'],
-            'holat'         => ['required', 'in:faol,yopilgan,muddati_otgan,muzlatilgan'],
-        ]);
+        return DB::transaction(function () use ($request, $kredit) {
+            $data = $request->validated();
 
-        $yangiMalumot = $request->only(['kafil_ism', 'kafil_telefon', 'kafil_manzil', 'izoh', 'holat']);
+            $yangiMalumot = [
+                'mijoz_id'            => $data['mijoz_id'],
+                'filial_id'           => $data['filial_id'],
+                'jami_summa'          => $data['jami_summa'],
+                'boshlangich_tolov'   => $data['boshlangich_tolov'],
+                'kredit_summa'        => $data['kredit_summa'],
+                'qoldiq_qarz'         => $data['kredit_summa'],
+                'oylik_tolov_miqdori' => $data['oylik_tolov_miqdori'],
+                'muddati_oy'          => $data['muddati_oy'],
+                'tolov_kuni'          => $data['tolov_kuni'] ?? 5,
+                'foiz_stavka'         => $data['foiz_stavka'] ?? 0,
+                'boshlanish_sana'     => $data['boshlanish_sana'],
+                'tugash_sana'         => $data['tugash_sana'],
+                'kafil_ism'           => $data['kafil_ism'] ?? null,
+                'kafil_telefon'       => $data['kafil_telefon'] ?? null,
+                'kafil_manzil'        => $data['kafil_manzil'] ?? null,
+                'izoh'                => $data['izoh'] ?? null,
+            ];
 
-        // Versiyani saqlash
-        $this->tulovService->versiyaSaqlash($kredit, $request->sabab, $yangiMalumot);
+            // Versiyani saqlash
+            $sabab = $request->input('sabab', 'Shartnoma tahrirlandi');
+            $this->tulovService->versiyaSaqlash($kredit, $sabab, $yangiMalumot);
 
-        $kredit->update($yangiMalumot);
+            $kredit->update($yangiMalumot);
 
-        return redirect()
-            ->route('kreditlar.show', $kredit)
-            ->with('muvaffaqiyat', 'Shartnoma yangilandi.');
+            // Tovarlarni yangilash (eski o'chirib yangisini yozish)
+            if (!empty($data['tovarlar'])) {
+                $kredit->tovarlar()->delete();
+                foreach ($data['tovarlar'] as $tovar) {
+                    Tovar::create([
+                        'reg_kredit_id'    => $kredit->id,
+                        'nomi'             => $tovar['nomi'],
+                        'soni'             => $tovar['soni'],
+                        'narx'             => $tovar['narx'],
+                        'jami_narx'        => $tovar['soni'] * $tovar['narx'],
+                        'barkod'           => $tovar['barkod'] ?? null,
+                        'tovar_katalog_id' => !empty($tovar['tovar_katalog_id']) ? (int)$tovar['tovar_katalog_id'] : null,
+                    ]);
+                }
+            }
+
+            // Grafik yangilash
+            $kredit->grafik()->delete();
+            $this->grafikYarat($kredit->fresh());
+
+            return redirect()
+                ->route('kreditlar.show', $kredit)
+                ->with('muvaffaqiyat', 'Shartnoma muvaffaqiyatli yangilandi.');
+        });
     }
 
     /** PDF chop etish */
@@ -244,6 +283,21 @@ class RegKreditController extends Controller
             ->setPaper('A4', 'portrait');
 
         return $pdf->stream("shartnoma-{$kredit->shartnoma_raqam}.pdf");
+    }
+
+    /** Hujjat chop etish */
+    public function hujjat(RegKredit $kredit, string $tur)
+    {
+        $this->filialRuxsatTekshir($kredit->filial_id);
+        $kredit->load(['mijoz', 'filial', 'xodim', 'tovarlar', 'grafik']);
+
+        $turlar = ['shartnoma','kafillik','grafik','yuk_xati','schyot','ariza','til_xat'];
+        if (!in_array($tur, $turlar)) abort(404);
+
+        $pdf = Pdf::loadView('kredit.hujjatlar.' . $tur, compact('kredit'))
+            ->setPaper('A4', 'portrait');
+
+        return $pdf->stream($kredit->shartnoma_raqam . '-' . $tur . '.pdf');
     }
 
     /** To'lov grafigini yaratish (yangi shartnoma uchun) */

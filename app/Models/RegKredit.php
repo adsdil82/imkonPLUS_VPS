@@ -29,6 +29,7 @@ class RegKredit extends Model implements Auditable
         'tugash_sana',
         'oylik_tolov_miqdori',
         'muddati_oy',
+        'tolov_kuni',
         'foiz_stavka',
         'kafil_ism',
         'kafil_telefon',

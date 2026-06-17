@@ -493,9 +493,17 @@ let tovarIndex = {{ $isEdit && $kr?->tovarlar->count() ? $kr->tovarlar->count() 
 
 // ── Tab navigatsiya ──────────────────────────────────────────────
 function tabKetish(id) {
-    var btn = document.getElementById(id + '-btn');
-    if (btn) btn.click();
-    window.scrollTo({top: 0, behavior: 'smooth'});
+    const el = document.getElementById(id + '-btn');
+    if (!el) return;
+    // Bootstrap 5 Tab API — ishonchli usul
+    bootstrap.Tab.getOrCreateInstance(el).show();
+    // Modal ichida bo'lsa modal-body ni, aks holda sahifani scroll qil
+    const modalBody = el.closest('.modal-body');
+    if (modalBody) {
+        modalBody.scrollTop = 0;
+    } else {
+        window.scrollTo({top: 0, behavior: 'smooth'});
+    }
 }
 
 // ── Moliyaviy hisoblash ──────────────────────────────────────────

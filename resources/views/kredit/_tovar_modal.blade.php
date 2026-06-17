@@ -1,6 +1,3 @@
-    </div>
-  </div>
-</div>
 {{-- ═══ TOVAR IZLASH MODAL ════════════════════════════════════════════ --}}
 <div class="modal fade" id="tovarIzlashModal" tabindex="-1" aria-labelledby="tovarModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -79,11 +76,11 @@
                   </td>
                   <td class="text-center small">
                     @if($t->qoldiq > 0)
-                      <span class="badge bg-success bg-opacity-15 text-success fw-bold">
+                      <span style="background:#d1fae5;color:#065f46;font-weight:700;padding:2px 10px;border-radius:6px;font-size:.8rem">
                         {{ number_format($t->qoldiq, 0) }}
                       </span>
                     @else
-                      <span class="badge bg-danger bg-opacity-15 text-danger">0</span>
+                      <span style="background:#fee2e2;color:#991b1b;font-weight:700;padding:2px 8px;border-radius:6px;font-size:.8rem">0</span>
                     @endif
                   </td>
                   <td class="text-end small fw-medium">
@@ -112,3 +109,4 @@
 
     </div>
   </div>
+</div>

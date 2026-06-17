@@ -1,112 +1,16 @@
-@push("scripts")
 @push('scripts')
 <script>
-// ─── ASOSIY FORM FUNKSIYALARI ────────────────────────────────────────
-
-let tovarIndex = 1;
-
-// Moliyaviy hisoblash
-function hisoblash() {
-    const jami   = parseFloat($('#jami_summa').val()) || 0;
-    const oldin  = parseFloat($('#boshlangich_tolov').val()) || 0;
-    const kredit = Math.max(0, jami - oldin);
-    const muddat = parseInt($('#muddati_oy').val()) || 1;
-    const foiz   = parseFloat($('#foiz_stavka').val()) || 0;
-
-    let oylik = kredit / muddat;
-    if (foiz > 0) {
-        oylik = (kredit + kredit * foiz / 100) / muddat;
-    }
-    $('#kredit_summa_display').val(formatSon(kredit));
-    $('#oylik_display').val(formatSon(Math.round(oylik)));
-    tugashSanaHisoblash();
-}
-
-function tugashSanaHisoblash() {
-    const bosh   = $('#boshlanish_sana').val();
-    const muddat = parseInt($('#muddati_oy').val()) || 1;
-    if (!bosh) return;
-    const dt = new Date(bosh);
-    dt.setMonth(dt.getMonth() + muddat - 1);
-    const y = dt.getFullYear();
-    const m = String(dt.getMonth() + 1).padStart(2, '0');
-    const d = String(dt.getDate()).padStart(2, '0');
-    $('#tugash_sana').val(`${y}-${m}-${d}`);
-}
-
-function formatSon(n) {
-    return n.toLocaleString('uz-UZ');
-}
-
-// Tovar qatorlari
-function tovarQosh() {
-    const i   = tovarIndex++;
-    const row = `
-    <div class="tovar-qator row g-2 mb-2 align-items-center">
-        <div class="col-sm-4">
-            <div class="input-group input-group-sm">
-                <input type="text" name="tovarlar[${i}][nomi]"
-                       class="form-control form-control-sm tovar-nomi-inp"
-                       placeholder="Tovar nomi" required>
-                <button type="button" class="btn btn-outline-primary btn-sm tovar-izlash-btn"
-                        onclick="tovarModalOch(this)" title="Ombordan tovar tanlash">
-                    <i class="bi bi-tv"></i><i class="bi bi-plus-lg" style="font-size:.65rem;vertical-align:super"></i>
-                </button>
-            </div>
-            <input type="hidden" name="tovarlar[${i}][tovar_katalog_id]" class="tovar-katalog-id" value="">
-        </div>
-        <div class="col-sm-2">
-            <input type="number" name="tovarlar[${i}][soni]"
-                   class="form-control form-control-sm tovar-soni"
-                   placeholder="Soni" value="1" min="1" oninput="tovarJamiHisoblash(this)">
-        </div>
-        <div class="col-sm-3">
-            <input type="number" name="tovarlar[${i}][narx]"
-                   class="form-control form-control-sm tovar-narx"
-                   placeholder="Narx" value="0" min="0" step="1000" oninput="tovarJamiHisoblash(this)">
-        </div>
-        <div class="col-sm-1">
-            <input type="text" class="form-control form-control-sm bg-body-secondary tovar-jami"
-                   placeholder="Jami" readonly>
-        </div>
-        <div class="col-sm-1">
-            <button type="button" class="btn btn-sm btn-outline-danger" onclick="tovarOchir(this)">
-                <i class="bi bi-trash"></i>
-            </button>
-        </div>
-    </div>`;
-    $('#tovarlar-container').append(row);
-}
-
-function tovarOchir(btn) {
-    if ($('.tovar-qator').length > 1) {
-        $(btn).closest('.tovar-qator').remove();
-    }
-}
-
-function tovarJamiHisoblash(inp) {
-    const row  = $(inp).closest('.tovar-qator');
-    const soni = parseFloat(row.find('.tovar-soni').val()) || 0;
-    const narx = parseFloat(row.find('.tovar-narx').val()) || 0;
-    row.find('.tovar-jami').val(formatSon(soni * narx));
-}
-
-// Init
-hisoblash();
-
 // ─── MIJOZ MODAL ────────────────────────────────────────────────────
-// ── Mijoz modal draggable ───────────────────────────────────────
+
 (function() {
     var el = document.getElementById('mijozIzlashModal');
     if (!el) return;
     el.addEventListener('shown.bs.modal', function() {
         var dialog = document.getElementById('mijozModalDialog');
-        var header = document.getElementById('mijozModalHeader');
-        if (!dialog || !header) return;
-        var vw = window.innerWidth, vh = window.innerHeight;
+        if (!dialog) return;
         dialog.style.position = 'fixed';
-        dialog.style.left = Math.max(0, (vw - dialog.offsetWidth) / 2) + 'px';
-        dialog.style.top  = Math.max(0, vh * 0.08) + 'px';
+        dialog.style.left = Math.max(0, (window.innerWidth - dialog.offsetWidth) / 2) + 'px';
+        dialog.style.top  = Math.max(0, window.innerHeight * 0.05) + 'px';
         dialog.style.margin = '0';
     });
     el.addEventListener('hidden.bs.modal', function() {
@@ -120,8 +24,7 @@ hisoblash();
         var dialog = document.getElementById('mijozModalDialog');
         if (!dialog || dialog.style.position !== 'fixed') return;
         e.preventDefault();
-        var sx = e.clientX - dialog.offsetLeft;
-        var sy = e.clientY - dialog.offsetTop;
+        var sx = e.clientX - dialog.offsetLeft, sy = e.clientY - dialog.offsetTop;
         function mv(ev) {
             dialog.style.left = Math.max(0, Math.min(window.innerWidth  - dialog.offsetWidth,  ev.clientX - sx)) + 'px';
             dialog.style.top  = Math.max(0, Math.min(window.innerHeight - dialog.offsetHeight, ev.clientY - sy)) + 'px';
@@ -132,119 +35,166 @@ hisoblash();
     });
 })();
 
-var _mijozModal = null;
-var _mijozTimer = null;
+var _mijozModal  = null;
+var _mijozTimer  = null;
+var _mijozPage   = 1;
+var _mijozQ      = '';
+var _mijozPages  = 1;
 
 function mijozModalOch() {
-    if (!_mijozModal) {
-        _mijozModal = new bootstrap.Modal(document.getElementById('mijozIzlashModal'));
-    }
+    var elM = document.getElementById('mijozIzlashModal');
+    if (!elM) { console.error('mijozIzlashModal topilmadi'); return; }
+    if (!_mijozModal) _mijozModal = new bootstrap.Modal(elM, { backdrop: false, keyboard: true });
+    _mijozPage  = 1;
+    _mijozQ     = '';
+    _mijozPages = 1;
     document.getElementById('mijoz-modal-qidiruv').value = '';
     document.getElementById('mijoz-modal-jadval').classList.add('d-none');
     document.getElementById('mijoz-modal-empty').classList.add('d-none');
-    document.getElementById('mijoz-modal-hint').classList.add('d-none');
+    document.getElementById('mijoz-modal-hint').classList.remove('d-none');
     document.getElementById('mijoz-modal-tbody').innerHTML = '';
     document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
+    _mijozHidePagination();
     _mijozModal.show();
-    // Barcha mijozlarni avtomatik yuklash
     setTimeout(function() {
-        mijozQidirAjax('');
+        mijozQidirAjax('', 1);
         document.getElementById('mijoz-modal-qidiruv').focus();
     }, 300);
 }
 
+function mijozSahifaOtish(delta) {
+    var newPage = _mijozPage + delta;
+    if (newPage < 1 || newPage > _mijozPages) return;
+    _mijozPage = newPage;
+    document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
+    document.getElementById('mijoz-modal-jadval').classList.add('d-none');
+    mijozQidirAjax(_mijozQ, _mijozPage);
+}
+
+function _mijozHidePagination() {
+    var pg = document.getElementById('mijoz-pagination');
+    if (pg) pg.classList.add('d-none');
+}
+
+function _mijozUpdatePagination(page, pages, total) {
+    _mijozPage  = page;
+    _mijozPages = pages;
+    var pg = document.getElementById('mijoz-pagination');
+    if (!pg) return;
+    if (pages <= 1) { pg.classList.add('d-none'); return; }
+    pg.classList.remove('d-none');
+    document.getElementById('mijoz-page-info').textContent = page + ' / ' + pages + '  (' + total + ' ta)';
+    var prev = document.getElementById('mijoz-prev-btn');
+    var next = document.getElementById('mijoz-next-btn');
+    if (prev) prev.disabled = (page <= 1);
+    if (next) next.disabled = (page >= pages);
+}
+
 function mijozModalTanlash(row) {
-    document.getElementById('mijoz_id').value       = row.dataset.id;
+    document.getElementById('mijoz_id').value        = row.dataset.id;
     document.getElementById('mijoz-tanlangan').value = row.dataset.fio;
     document.getElementById('mijoz-info').innerHTML  =
         '<i class="bi bi-check-circle text-success me-1"></i>' +
         '<strong>' + row.dataset.fio + '</strong>' +
         ' &nbsp;&middot;&nbsp; ' + row.dataset.telefon +
         ' &nbsp;&middot;&nbsp; ' + row.dataset.passport;
+    var xEl = document.getElementById('mijoz-info-xato');
+    if (xEl) xEl.style.display = 'none';
     if (_mijozModal) _mijozModal.hide();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
     var mqEl = document.getElementById('mijoz-modal-qidiruv');
-    if (!mqEl) return;
-
-    mqEl.addEventListener('input', function() {
-        clearTimeout(_mijozTimer);
-        var q = this.value.trim();
-        document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
-        document.getElementById('mijoz-modal-hint').classList.add('d-none');
-        _mijozTimer = setTimeout(function() { mijozQidirAjax(q); }, 250);
-    });
-
-    mqEl.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            // Agar 1 ta natija qolsa - tanlash
-            var rows = document.querySelectorAll('#mijoz-modal-tbody tr');
-            if (rows.length === 1) {
-                mijozModalTanlash(rows[0]);
-                return;
-            }
-            // Darhol qidiruv (timer kutmasdan)
+    if (mqEl) {
+        mqEl.addEventListener('input', function() {
             clearTimeout(_mijozTimer);
-            var q = mqEl.value.trim();
+            _mijozQ = this.value.trim();
+            _mijozPage = 1;
             document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
-            mijozQidirAjax(q);
-        }
-    });
+            document.getElementById('mijoz-modal-hint').classList.add('d-none');
+            _mijozTimer = setTimeout(function() { mijozQidirAjax(_mijozQ, 1); }, 280);
+        });
+        mqEl.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            var rows = document.querySelectorAll('#mijoz-modal-tbody tr');
+            if (rows.length === 1) { mijozModalTanlash(rows[0]); return; }
+            clearTimeout(_mijozTimer);
+            document.getElementById('mijoz-modal-spinner').classList.remove('d-none');
+            mijozQidirAjax(mqEl.value.trim(), 1);
+        });
+    }
+    var tvQ = document.getElementById('tovar-modal-qidiruv');
+    if (tvQ) tvQ.addEventListener('input', function() { tovarModalFiltr(); });
+    var tvModal = document.getElementById('tovarIzlashModal');
+    if (tvModal) {
+        tvModal.addEventListener('shown.bs.modal', function() {
+            tovarGuruhFilter(_aktifGuruh, document.querySelector('#tovar-guruh-tablar button.active'));
+        });
+    }
 });
 
-function mijozQidirAjax(q) {
-    var filialId = document.querySelector('[name=filial_id]') ?
-                  document.querySelector('[name=filial_id]').value : '';
-    $.getJSON('{{ route("mijozlar.ajax.qidiruv") }}', { q: q, filial_id: filialId })
-        .done(function(data) {
-            document.getElementById('mijoz-modal-spinner').classList.add('d-none');
-            var tbody  = document.getElementById('mijoz-modal-tbody');
-            var jadval = document.getElementById('mijoz-modal-jadval');
-            var empty  = document.getElementById('mijoz-modal-empty');
-            var hint   = document.getElementById('mijoz-modal-hint');
+function mijozQidirAjax(q, page) {
+    var filialEl = document.querySelector('[name=filial_id]');
+    $.getJSON('{{ route("mijozlar.ajax.qidiruv") }}', {
+        q: q || '',
+        filial_id: filialEl ? filialEl.value : '',
+        page: page || 1
+    })
+    .done(function(res) {
+        document.getElementById('mijoz-modal-spinner').classList.add('d-none');
+        var data   = res.data !== undefined ? res.data : res;
+        var total  = res.total !== undefined ? res.total : data.length;
+        var pg     = res.page  !== undefined ? res.page  : 1;
+        var pages  = res.pages !== undefined ? res.pages : 1;
 
-            hint.classList.add('d-none');
-            if (data.length === 0) {
-                jadval.classList.add('d-none');
-                empty.classList.remove('d-none');
-                if (empty.querySelector('div')) empty.querySelector('div').textContent = 'Mijoz topilmadi';
-                tbody.innerHTML = '';
-                return;
-            }
-            empty.classList.add('d-none');
-            jadval.classList.remove('d-none');
-            // Sarlavhaga soni ko'rsatish
-            var hdr = document.getElementById('mijoz-modal-soni-hdr');
-            if (hdr) hdr.textContent = data.length + (data.length >= 50 ? ' ta (birinchi 50 ta)' : ' ta topildi');
+        var tbody  = document.getElementById('mijoz-modal-tbody');
+        var jadval = document.getElementById('mijoz-modal-jadval');
+        var empty  = document.getElementById('mijoz-modal-empty');
+        document.getElementById('mijoz-modal-hint').classList.add('d-none');
 
-            tbody.innerHTML = data.map(function(m) {
-                var badge = m.holat === 'faol'
-                    ? '<span class="badge bg-success bg-opacity-15 text-success" style="font-size:.65rem">Faol</span>'
-                    : '<span class="badge bg-secondary bg-opacity-15 text-secondary" style="font-size:.65rem">Nofaol</span>';
-                return '<tr class="mijoz-modal-qator" style="cursor:pointer"' +
-                    ' data-id="' + m.id + '"' +
-                    ' data-fio="' + (m.fio || '').replace(/"/g, "'") + '"' +
-                    ' data-telefon="' + (m.telefon || '') + '"' +
-                    ' data-passport="' + (m.passport || '') + '"' +
-                    ' ondblclick="mijozModalTanlash(this)"' +
-                    ' title="2 marta bosing">' +
-                    '<td><div class="fw-medium small">' + m.fio + '</div></td>' +
-                    '<td class="small">' + m.telefon + '</td>' +
-                    '<td class="small text-muted">' + m.passport + '</td>' +
-                    '<td class="small text-muted">' + (m.filial || '') + '</td>' +
-                    '<td class="text-center">' + badge + '</td>' +
-                    '</tr>';
-            }).join('');
-        })
-        .fail(function(xhr, status, err) {
-            document.getElementById('mijoz-modal-spinner').classList.add('d-none');
-            document.getElementById('mijoz-modal-hint').classList.add('d-none');
-            var empty = document.getElementById('mijoz-modal-empty');
+        if (!data.length) {
+            jadval.classList.add('d-none');
             empty.classList.remove('d-none');
-            empty.querySelector('div').textContent = 'Xatolik yuz berdi. Sahifani yangilang.';
-        });
+            tbody.innerHTML = '';
+            _mijozHidePagination();
+            return;
+        }
+        empty.classList.add('d-none');
+        jadval.classList.remove('d-none');
+
+        var hdr = document.getElementById('mijoz-modal-soni-hdr');
+        if (hdr) {
+            if (q) hdr.textContent = data.length + ' ta topildi';
+            else   hdr.textContent = 'Jami ' + total + ' ta';
+        }
+
+        tbody.innerHTML = data.map(function(m) {
+            var faol = m.holat === 'faol';
+            var badge = faol
+                ? '<span style="background:#d1fae5;color:#065f46;font-weight:700;padding:2px 10px;border-radius:6px;font-size:.78rem">Faol</span>'
+                : '<span style="background:#f1f5f9;color:#475569;font-weight:600;padding:2px 10px;border-radius:6px;font-size:.78rem">Nofaol</span>';
+            return '<tr class="mijoz-modal-qator" style="cursor:pointer"' +
+                ' data-id="' + m.id + '"' +
+                ' data-fio="' + (m.fio||'').replace(/"/g,"'") + '"' +
+                ' data-telefon="' + (m.telefon||'') + '"' +
+                ' data-passport="' + (m.passport||'') + '"' +
+                ' ondblclick="mijozModalTanlash(this)" title="2 marta bosing">' +
+                '<td><div class="fw-medium small">' + m.fio + '</div></td>' +
+                '<td class="small">' + m.telefon + '</td>' +
+                '<td class="small text-muted">' + m.passport + '</td>' +
+                '<td class="small text-muted">' + (m.filial||'') + '</td>' +
+                '<td class="text-center">' + badge + '</td></tr>';
+        }).join('');
+
+        _mijozUpdatePagination(pg, pages, total);
+    })
+    .fail(function() {
+        document.getElementById('mijoz-modal-spinner').classList.add('d-none');
+        var empty = document.getElementById('mijoz-modal-empty');
+        empty.classList.remove('d-none');
+        if (empty.querySelector('div')) empty.querySelector('div').textContent = 'Xatolik. Sahifani yangilang.';
+    });
 }
 
 // ─── TOVAR MODAL ────────────────────────────────────────────────────
@@ -253,28 +203,66 @@ var _tovarModal     = null;
 var _aktifGuruh     = 0;
 
 function tovarModalOch(btn) {
-    _activeTovarRow = $(btn).closest('.tovar-qator');
-    if (!_tovarModal) {
-        _tovarModal = new bootstrap.Modal(document.getElementById('tovarIzlashModal'));
-    }
+    _activeTovarRow = btn ? btn.closest('.tovar-qator') : null;
+    var elT = document.getElementById('tovarIzlashModal');
+    if (!elT) { console.error('tovarIzlashModal topilmadi'); return; }
+    if (!_tovarModal) _tovarModal = new bootstrap.Modal(elT, { backdrop: false, keyboard: true });
     document.getElementById('tovar-modal-qidiruv').value = '';
-    // Avvalgi highlight larni tozalash
     document.querySelectorAll('.tovar-modal-qator').forEach(function(r){ r.classList.remove('table-success'); });
     tovarGuruhFilter(0, document.querySelector('#tovar-guruh-tablar button[data-guruh="0"]'));
     _tovarModal.show();
-    setTimeout(function() {
-        document.getElementById('tovar-modal-qidiruv').focus();
-    }, 400);
+    setTimeout(function() { document.getElementById('tovar-modal-qidiruv').focus(); }, 300);
 }
 
 function tovarModalTanlash(tr) {
     if (!_activeTovarRow) return;
-    _activeTovarRow.find('.tovar-nomi-inp').val(tr.dataset.nomi);
-    _activeTovarRow.find('.tovar-narx').val(tr.dataset.narx).trigger('input');
-    _activeTovarRow.find('.tovar-soni').val(1).trigger('input');
-    _activeTovarRow.find('.tovar-katalog-id').val(tr.dataset.id);
-    tovarJamiHisoblash(_activeTovarRow.find('.tovar-soni')[0]);
-    // Tanlangan qatorni highlight qilish
+    _activeTovarRow.querySelector('.tovar-nomi-inp').value = tr.dataset.nomi;
+    var narxInp = _activeTovarRow.querySelector('.tovar-narx');
+    var soniInp = _activeTovarRow.querySelector('.tovar-soni');
+    narxInp.value = tr.dataset.narx;
+    soniInp.value = 1;
+    _activeTovarRow.querySelector('.tovar-katalog-id').value = tr.dataset.id;
+    var jamiEl = _activeTovarRow.querySelector('.tovar-jami');
+    if (jamiEl) jamiEl.value = formatSon(parseFloat(narxInp.value)||0);
+    if (typeof tovarJamiYig === 'function') tovarJamiYig();
+    if (typeof hisoblash === 'function') hisoblash();
     document.querySelectorAll('.tovar-modal-qator').forEach(function(r){ r.classList.remove('table-success'); });
     tr.classList.add('table-success');
     if (_tovarModal) _tovarModal.hide();
+}
+
+function tovarGuruhFilter(guruhId, btn) {
+    _aktifGuruh = parseInt(guruhId);
+    document.querySelectorAll('#tovar-guruh-tablar button').forEach(function(b){ b.classList.remove('active'); });
+    if (btn) btn.classList.add('active');
+    var q = (document.getElementById('tovar-modal-qidiruv').value||'').toLowerCase().trim();
+    var rows = document.querySelectorAll('#tovar-modal-tbody .tovar-modal-qator');
+    var visible = 0;
+    rows.forEach(function(row) {
+        var ok = (_aktifGuruh===0 || parseInt(row.dataset.guruh)===_aktifGuruh) &&
+                 (!q || (row.dataset.nomi||'').toLowerCase().includes(q));
+        row.style.display = ok ? '' : 'none';
+        if (ok) visible++;
+    });
+    var soni = document.getElementById('tovar-modal-soni');
+    if (soni) soni.textContent = visible;
+    var empty  = document.getElementById('tovar-modal-empty');
+    var jadval = document.getElementById('tovar-modal-jadval');
+    if (visible === 0) {
+        if (empty)  empty.classList.remove('d-none');
+        if (jadval) jadval.classList.add('d-none');
+    } else {
+        if (empty)  empty.classList.add('d-none');
+        if (jadval) jadval.classList.remove('d-none');
+    }
+}
+
+function tovarModalFiltr(q) {
+    if (q !== undefined) {
+        var inp = document.getElementById('tovar-modal-qidiruv');
+        if (inp) inp.value = q;
+    }
+    tovarGuruhFilter(_aktifGuruh, document.querySelector('#tovar-guruh-tablar button.active'));
+}
+</script>
+@endpush

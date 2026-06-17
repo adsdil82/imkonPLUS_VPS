@@ -33,6 +33,8 @@ use App\Http\Controllers\HybridMailController;
 use App\Http\Controllers\HisobRejasiController;
 use App\Http\Controllers\YangiTulovTuriController;
 use App\Http\Controllers\NotificationTemplateController;
+use App\Http\Controllers\HarajatController;
+use App\Http\Controllers\PulOqimController;
 
 // ─── Autentifikatsiya ─────────────────────────────────────────────
 
@@ -351,6 +353,39 @@ Route::middleware('auth')->group(function () {
             Route::post('/{shablon}/preview',[NotificationTemplateController::class, 'preview'])->name('preview');
         });
 
+    });
+
+
+    // ─── Harajatlar ───────────────────────────────────────────────
+
+    // Pul Oqimlari (CashFlow)
+    Route::prefix('pul-oqimlari')->name('pul-oqimlari.')->group(function () {
+        Route::get('/',                          [PulOqimController::class, 'index'])->name('index');
+        Route::get('/yangi',                     [PulOqimController::class, 'create'])->name('create')
+            ->middleware('rol.check:admin,menejer,kassir');
+        Route::post('/',                         [PulOqimController::class, 'store'])->name('store')
+            ->middleware('rol.check:admin,menejer,kassir');
+        Route::get('/{pulOqim}/tahrirlash',      [PulOqimController::class, 'edit'])->name('edit')
+            ->middleware('rol.check:admin,menejer');
+        Route::put('/{pulOqim}',                 [PulOqimController::class, 'update'])->name('update')
+            ->middleware('rol.check:admin,menejer');
+        Route::delete('/{pulOqim}',              [PulOqimController::class, 'destroy'])->name('destroy')
+            ->middleware('rol.check:admin');
+        Route::get('/ajax/kunlik-chart',         [PulOqimController::class, 'ajaxKunlikChart'])->name('ajax.chart');
+    });
+
+    Route::prefix('harajatlar')->name('harajatlar.')->group(function () {
+        Route::get('/',               [HarajatController::class, 'index'])->name('index');
+        Route::get('/yangi',          [HarajatController::class, 'create'])->name('create')
+            ->middleware('rol.check:admin,menejer');
+        Route::post('/',              [HarajatController::class, 'store'])->name('store')
+            ->middleware('rol.check:admin,menejer');
+        Route::get('/{harajat}/tahrirlash', [HarajatController::class, 'edit'])->name('edit')
+            ->middleware('rol.check:admin,menejer');
+        Route::put('/{harajat}',      [HarajatController::class, 'update'])->name('update')
+            ->middleware('rol.check:admin,menejer');
+        Route::delete('/{harajat}',   [HarajatController::class, 'destroy'])->name('destroy')
+            ->middleware('rol.check:admin');
     });
 
     // Buxgalteriya

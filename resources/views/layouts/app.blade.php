@@ -48,11 +48,10 @@
             min-height: 100vh;
             transition: width 0.25s;
         }
-        #sidebar.collapsed { width: 60px; overflow: hidden; }
-        #sidebar.collapsed .nav-label,
-        #sidebar.collapsed .grup-label,
-        #sidebar.collapsed .sidebar-header-text { display: none; }
-        #sidebar.collapsed .nav-link { text-align: center; padding: 0.75rem 0; }
+        /* sidebar collapsed faqat mobile da ishlatiladi, desktop da hech qachon */
+        @media (max-width: 767.98px) {
+            #sidebar.collapsed { width: 280px !important; }
+        }
 
         /* Guruh sarlavhalari — temaga mos aksent rang */
         /* ── Guruh sarlavhalar (to'liq keng, bosish mumkin) ─── */
@@ -254,6 +253,23 @@
     </style>
 
     @stack('styles')
+
+    <style>
+    /* Nested modals: mijoz/tovar modal kreditYangiModal ustida ko'rinsin */
+    #mijozIzlashModal,
+    #tovarIzlashModal {
+        z-index: 1080 !important;
+    }
+    #mijozIzlashModal .modal-dialog,
+    #tovarIzlashModal .modal-dialog {
+        z-index: 1081;
+    }
+    /* kreditYangiModal ichida scroll to'g'ri ishlashi uchun */
+    #kreditYangiModal .modal-body {
+        overflow-y: auto;
+        max-height: calc(100vh - 120px);
+    }
+    </style>
 </head>
 <body>
 <div class="d-flex">
@@ -282,6 +298,8 @@
         elseif (request()->routeIs('kreditlar.*'))                                                     $aktiv_grup = 'shartnomalar';
         elseif (request()->routeIs('hisobotlar.*'))                                                    $aktiv_grup = 'hisobotlar';
         elseif (request()->routeIs('pos.*','katalog.*','tovar-guruhlar.*','kirim.*','chiqim.*','ombor.*')) $aktiv_grup = 'tovarlar';
+        elseif (request()->routeIs('harajatlar.*'))                                                    $aktiv_grup = 'harajatlar';
+        elseif (request()->routeIs('pul-oqimlari.*'))                                                 $aktiv_grup = 'pul-oqimlari';
         elseif (request()->routeIs('xabarnoma.*'))                                                    $aktiv_grup = 'xabarnoma';
         elseif (request()->routeIs('transfer.*'))                                                      $aktiv_grup = 'transfer';
         elseif (request()->routeIs('taminotchi.*'))                                                    $aktiv_grup = 'taminotchi';
@@ -526,6 +544,67 @@
             </ul>
             @endif
 
+
+            {{-- HARAJATLAR --}}
+            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isKassir())
+            <li class="grup-header">
+                <button class="grup-toggle" data-grup="harajatlar">
+                    <span class="g-label">&#128181; HARAJATLAR</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='harajatlar' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                </button>
+            </li>
+            <ul class="grup-items {{ $aktiv_grup!=='harajatlar' ? 'closed' : '' }}" id="grup-harajatlar">
+                <li class="nav-item">
+                    <a href="{{ route('harajatlar.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('harajatlar.index') ? 'active' : '' }}">
+                        <i class="bi bi-wallet2 me-2 text-danger"></i>
+                        <span class="nav-label">Harajatlar</span>
+                    </a>
+                </li>
+                @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
+                <li class="nav-item">
+                    <a href="{{ route('harajatlar.create') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('harajatlar.create') ? 'active' : '' }}">
+                        <i class="bi bi-plus-circle me-2 text-warning"></i>
+                        <span class="nav-label">Yangi harajat</span>
+                    </a>
+                </li>
+                @endif
+            </ul>
+            @endif
+
+            {{-- PUL OQIMLARI --}}
+            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isKassir())
+            <li class="grup-header">
+                <button class="grup-toggle" data-grup="pul-oqimlari">
+                    <span class="g-label">&#9889; PUL OQIMLARI</span>
+                    <i class="g-icon bi {{ $aktiv_grup==='pul-oqimlari' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+                </button>
+            </li>
+            <ul class="grup-items {{ $aktiv_grup!=='pul-oqimlari' ? 'closed' : '' }}" id="grup-pul-oqimlari">
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.index') }}"
+                       class="nav-link text-white py-1 {{ request()->routeIs('pul-oqimlari.index') ? 'active' : '' }}">
+                        <i class="bi bi-arrow-left-right me-2" style="color:#6366f1"></i>
+                        <span class="nav-label">Pul Oqimlari</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.create', ['yunalish'=>'kirim']) }}"
+                       class="nav-link text-white py-1">
+                        <i class="bi bi-arrow-up-circle me-2 text-success"></i>
+                        <span class="nav-label">Kirim qo'shish</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ route('pul-oqimlari.create', ['yunalish'=>'chiqim']) }}"
+                       class="nav-link text-white py-1">
+                        <i class="bi bi-arrow-down-circle me-2 text-danger"></i>
+                        <span class="nav-label">Chiqim qo'shish</span>
+                    </a>
+                </li>
+            </ul>
+            @endif
 
             {{-- XABARNOMA guruh --}}
             @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
@@ -948,11 +1027,8 @@ const sidebar      = document.getElementById("sidebar");
 const sidebarToggle = document.getElementById("sidebar-toggle");
 const sidebarOverlay = document.getElementById("sidebar-overlay");
 
-// Desktop: oldingi holat saqlangan
-const sidebarState = localStorage.getItem("nasiya_sidebar") || "open";
-if (window.innerWidth >= 768 && sidebarState === "closed") {
-    sidebar.classList.add("collapsed");
-}
+// Sidebar desktop da HECH QACHON yashirilmaydi
+localStorage.removeItem("nasiya_sidebar");
 
 function isMobile() { return window.innerWidth < 768; }
 
@@ -973,9 +1049,6 @@ function closeMobileSidebar() {
 sidebarToggle.addEventListener("click", function() {
     if (isMobile()) {
         sidebar.classList.contains("mobile-open") ? closeMobileSidebar() : openMobileSidebar();
-    } else {
-        sidebar.classList.toggle("collapsed");
-        localStorage.setItem("nasiya_sidebar", sidebar.classList.contains("collapsed") ? "closed" : "open");
     }
 });
 

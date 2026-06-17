@@ -1,5 +1,5 @@
 <div class="modal fade" id="mijozIzlashModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg" id="mijozModalDialog" style="max-width:720px">
+  <div class="modal-dialog modal-xl" id="mijozModalDialog" style="max-width:1040px">
     <div class="modal-content border-0 shadow-lg">
 
       {{-- Header --}}
@@ -59,12 +59,27 @@
         </div>
       </div>
 
-      <div class="modal-footer py-2 justify-content-between">
-        <div class="d-flex align-items-center gap-2">
+      <div class="modal-footer py-2 justify-content-between align-items-center flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
           <small class="text-muted">
             <i class="bi bi-hand-index me-1"></i>2 marta bosing
             &nbsp;|&nbsp; <span id="mijoz-modal-soni-hdr" class="fw-bold"></span>
           </small>
+          {{-- Pagination --}}
+          <div id="mijoz-pagination" class="d-none align-items-center gap-1 d-flex">
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                    id="mijoz-prev-btn" onclick="mijozSahifaOtish(-1)" disabled>
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <span id="mijoz-page-info" class="small text-muted px-1">1 / 1</span>
+            <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2"
+                    id="mijoz-next-btn" onclick="mijozSahifaOtish(1)" disabled>
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
         </div>
         <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Yopish</button>
       </div>
+    </div>
+  </div>
+</div>

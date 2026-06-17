@@ -62,7 +62,7 @@ class RegKreditController extends Controller
 
         // Ombordan tovarlar (qoldig'i bor, modal uchun guruh bo'yicha)
         $tovarGuruhlar = TovarGuruh::with([
-            'tovarlar' => fn($q) => $q->faol()->where('qoldiq', '>', 0)->orderBy('nomi')->select(['id','guruh_id','nomi','qoldiq','sotish_narx','birlik'])
+            'tovarlar' => fn($q) => $q->faol()->where('qoldiq', '>', 0)->orderByDesc('created_at')->take(30)->select(['id','guruh_id','nomi','qoldiq','sotish_narx','birlik','created_at'])
         ])->whereHas('tovarlar', fn($q) => $q->faol()->where('qoldiq', '>', 0))
           ->orderBy('nomi')->get(['id','nomi']);
 
@@ -202,7 +202,7 @@ class RegKreditController extends Controller
             : Filial::where('id', $kredit->filial_id)->get();
 
         $tovarGuruhlar = TovarGuruh::with([
-            'tovarlar' => fn($q) => $q->faol()->where('qoldiq', '>', 0)->orderBy('nomi')->select(['id','guruh_id','nomi','qoldiq','sotish_narx','birlik'])
+            'tovarlar' => fn($q) => $q->faol()->where('qoldiq', '>', 0)->orderByDesc('created_at')->take(30)->select(['id','guruh_id','nomi','qoldiq','sotish_narx','birlik','created_at'])
         ])->whereHas('tovarlar', fn($q) => $q->faol()->where('qoldiq', '>', 0))
           ->orderBy('nomi')->get(['id','nomi']);
 

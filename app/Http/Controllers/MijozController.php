@@ -117,24 +117,36 @@ class MijozController extends Controller
 
         $q = trim($request->q ?? '');
 
-        // Bo'sh q bo'lsa — birinchi 50 ta (avtomatik yuklash uchun)
+        $perPage = 20;
+        $page    = max(1, (int)($request->page ?? 1));
+
+        // Bo'sh q bo'lsa — sahifalab ko'rsatish
         if (mb_strlen($q) < 2) {
-            $mijozlar = Mijoz::with('filial:id,nomi,kod')
+            $base = Mijoz::with('filial:id,nomi,kod')
                 ->when($filialId, fn($qu) => $qu->where('filial_id', $filialId))
                 ->select(['id','filial_id','familiya','ism','otasining_ismi',
                           'telefon','passport_seriya','passport_raqam','holat'])
-                ->orderBy('familiya')
-                ->limit(50)
-                ->get();
-            return response()->json($mijozlar->map(fn($m) => [
-                'id'       => $m->id,
-                'fio'      => trim($m->familiya . ' ' . $m->ism .
-                              ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
-                'telefon'  => $m->telefon ?? '',
-                'passport' => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
-                'filial'   => $m->filial?->nomi ?? '',
-                'holat'    => $m->holat,
-            ]));
+                ->orderByDesc('created_at');
+
+            $total   = $base->count();
+            $pages   = max(1, (int)ceil($total / $perPage));
+            $page    = min($page, $pages);
+            $mijozlar = (clone $base)->offset(($page - 1) * $perPage)->limit($perPage)->get();
+
+            return response()->json([
+                'data'  => $mijozlar->map(fn($m) => [
+                    'id'       => $m->id,
+                    'fio'      => trim($m->familiya . ' ' . $m->ism .
+                                  ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
+                    'telefon'  => $m->telefon ?? '',
+                    'passport' => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
+                    'filial'   => $m->filial?->nomi ?? '',
+                    'holat'    => $m->holat,
+                ]),
+                'total' => $total,
+                'page'  => $page,
+                'pages' => $pages,
+            ]);
         }
 
         // Ikkala alifbo versiyasini tayyorlaymiz
@@ -172,11 +184,11 @@ class MijozController extends Controller
             })
             ->select(['id','filial_id','familiya','ism','otasining_ismi',
                       'telefon','passport_seriya','passport_raqam','holat'])
-            ->orderBy('familiya')
-            ->limit(40)
+            ->orderByDesc('created_at')
+            ->limit(30)
             ->get();
 
-        return response()->json($mijozlar->map(fn($m) => [
+        $mapped = $mijozlar->map(fn($m) => [
             'id'       => $m->id,
             'fio'      => trim($m->familiya . ' ' . $m->ism .
                           ($m->otasining_ismi ? ' ' . $m->otasining_ismi : '')),
@@ -184,7 +196,8 @@ class MijozController extends Controller
             'passport' => trim(($m->passport_seriya ?? '') . ' ' . ($m->passport_raqam ?? '')),
             'filial'   => $m->filial?->nomi ?? '',
             'holat'    => $m->holat,
-        ]));
+        ]);
+        return response()->json(['data' => $mapped, 'total' => count($mapped), 'page' => 1, 'pages' => 1]);
     }
 
     /** Kirilchani lotinga o'girish (O'zbek alfaviti) */

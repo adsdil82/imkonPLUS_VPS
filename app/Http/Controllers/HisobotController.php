@@ -9,6 +9,7 @@ use App\Models\ShartnomaxodimTarixi;
 use App\Models\ShartnomaiFilialTarixi;
 use App\Models\TulovTuri;
 use App\Models\Grafik;
+use App\Models\Foydalanuvchi;
 use App\Models\RegKredit;
 use App\Models\Tulov;
 use Illuminate\Http\Request;
@@ -260,17 +261,27 @@ class HisobotController extends Controller
     // ── 5. Kelayotgan to'lovlar ────────────────────────────────────
     public function kelayotganTulovlar(Request $request)
     {
+        $user     = Auth::user();
         $filialId = $this->filialId($request);
-        $kunlar   = (int)($request->kunlar ?? 7);
+        $kunlar   = max(1, min(31, (int)($request->kunlar ?? 7)));
+        $xodimId  = $request->xodim_id ? (int)$request->xodim_id : null;
 
-        $tulovlar = Grafik::with(['kredit.mijoz','kredit.filial'])
+        $tulovlar = Grafik::with(['kredit.mijoz','kredit.filial','kredit.xodim','kredit.joriyXodim'])
             ->when($filialId, fn($q) => $q->whereHas('kredit', fn($k) => $k->where('filial_id',$filialId)))
+            ->when($xodimId, fn($q) => $q->whereHas('kredit', function($k) use ($xodimId) {
+                $k->where('xodim_id', $xodimId)->orWhere('joriy_xodim_id', $xodimId);
+            }))
             ->whereIn('holat',['tolanmagan','qisman'])
             ->whereNotNull('tolov_sana')
             ->whereBetween('tolov_sana',[now()->toDateString(), now()->addDays($kunlar)->toDateString()])
             ->orderBy('tolov_sana')->get();
 
-        return view('hisobot.kelayotgan', compact('tulovlar','kunlar'));
+        $filiallar = $user->isAdmin() ? Filial::faol()->get() : collect();
+        $xodimlar  = Foydalanuvchi::where('holat','faol')
+            ->when($filialId, fn($q) => $q->where('filial_id', $filialId))
+            ->orderBy('ism_familiya')->get(['id','ism_familiya']);
+
+        return view('hisobot.kelayotgan', compact('tulovlar','kunlar','filiallar','filialId','xodimId','xodimlar'));
     }
 
     // ── 6. Konstruktor ─────────────────────────────────────────────

@@ -8,22 +8,79 @@
 @endsection
 
 @section('content')
+
+{{-- Sarlavha --}}
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h5 class="mb-0 fw-bold">
         <i class="bi bi-calendar-check me-1"></i> Kelayotgan to'lovlar
         <span class="badge bg-secondary ms-1">{{ $tulovlar->count() }}</span>
     </h5>
     <small class="text-muted">
-        Keyingi 7 kun ichida to'lanishi kerak bo'lgan to'lovlar
-        ({{ now()->format('d.m.Y') }} — {{ now()->addDays(7)->format('d.m.Y') }})
+        Keyingi <strong>{{ $kunlar }}</strong> kun ichida to'lanishi kerak bo'lgan to'lovlar
+        ({{ now()->format('d.m.Y') }} — {{ now()->addDays($kunlar)->format('d.m.Y') }})
     </small>
+</div>
+
+{{-- Filtr paneli --}}
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+        <form method="GET" action="{{ route('hisobotlar.kelayotgan') }}" class="row g-2 align-items-end">
+
+            {{-- Kunlar tanlash --}}
+            <div class="col-sm-auto">
+                <label class="form-label form-label-sm mb-1 text-muted">Kunlar soni</label>
+                <select name="kunlar" class="form-select form-select-sm" style="width:auto;min-width:90px">
+                    @foreach([1,2,3,5,7,10,14,21,30,31] as $k)
+                        <option value="{{ $k }}" {{ $kunlar == $k ? 'selected' : '' }}>{{ $k }} kun</option>
+                    @endforeach
+                </select>
+            </div>
+
+            @if(Auth::user()->isAdmin())
+            {{-- Filial --}}
+            <div class="col-sm-2">
+                <label class="form-label form-label-sm mb-1 text-muted">Filial</label>
+                <select name="filial_id" class="form-select form-select-sm">
+                    <option value="">Barcha filial</option>
+                    @foreach($filiallar as $f)
+                        <option value="{{ $f->id }}" {{ $filialId == $f->id ? 'selected' : '' }}>{{ $f->nomi }}</option>
+                    @endforeach
+                </select>
+            </div>
+            @endif
+
+            {{-- Mas'ul xodim --}}
+            <div class="col-sm-3">
+                <label class="form-label form-label-sm mb-1 text-muted">Mas'ul xodim</label>
+                <select name="xodim_id" class="form-select form-select-sm">
+                    <option value="">Barcha xodimlar</option>
+                    @foreach($xodimlar as $x)
+                        <option value="{{ $x->id }}" {{ $xodimId == $x->id ? 'selected' : '' }}>{{ $x->ism_familiya }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Obnovit tugmasi --}}
+            <div class="col-sm-auto">
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Yangilash
+                </button>
+                @if(request()->anyFilled(['kunlar','xodim_id','filial_id']))
+                <a href="{{ route('hisobotlar.kelayotgan') }}" class="btn btn-outline-secondary btn-sm ms-1">
+                    <i class="bi bi-x"></i>
+                </a>
+                @endif
+            </div>
+
+        </form>
+    </div>
 </div>
 
 @if($tulovlar->isEmpty())
 <div class="card border-0 shadow-sm">
     <div class="card-body text-center text-muted py-5">
         <i class="bi bi-calendar-check fs-3 d-block mb-2"></i>
-        Keyingi 7 kun ichida to'lov kutilmayapti
+        Keyingi {{ $kunlar }} kun ichida to'lov kutilmayapti
     </div>
 </div>
 @else
@@ -52,12 +109,13 @@
 
     <div class="card border-0 shadow-sm">
         <div class="table-responsive">
-            <table class="table table-hover mb-0 align-middle">
+            <table class="table table-hover mb-0 align-middle" style="font-size:.875rem">
                 <thead class="table-light">
                     <tr>
                         <th>Shartnoma</th>
                         <th>Mijoz</th>
                         @if(Auth::user()->isAdmin())<th>Filial</th>@endif
+                        <th>Mas'ul xodim</th>
                         <th class="text-end">To'lov summasi</th>
                         <th class="text-end">Qoldiq</th>
                         <th>Oy tartib</th>
@@ -67,6 +125,9 @@
                 </thead>
                 <tbody>
                     @foreach($guruh as $g)
+                    @php
+                        $masulXodim = $g->kredit?->joriyXodim ?? $g->kredit?->xodim;
+                    @endphp
                     <tr>
                         <td>
                             @if($g->kredit)
@@ -92,6 +153,13 @@
                             <span class="badge bg-secondary">{{ $g->kredit?->filial?->kod ?? '—' }}</span>
                         </td>
                         @endif
+                        <td>
+                            @if($masulXodim)
+                                <span class="text-dark small">{{ $masulXodim->ism_familiya }}</span>
+                            @else
+                                <span class="text-muted small">—</span>
+                            @endif
+                        </td>
                         <td class="text-end fw-medium">
                             {{ number_format($g->tolov_summa, 0, '.', ' ') }}
                         </td>

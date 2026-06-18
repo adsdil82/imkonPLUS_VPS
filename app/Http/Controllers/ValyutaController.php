@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 use App\Models\Valyuta;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Http;
 
 class ValyutaController extends Controller {
     public function index() {
@@ -36,6 +37,32 @@ class ValyutaController extends Controller {
         $valyuta->update($d);
         return back()->with('muvaffaqiyat', "Valyuta «{$valyuta->kod}» yangilandi.");
     }
+    public function cbuUpdate() {
+        try {
+            $resp = Http::timeout(10)->get('https://cbu.uz/uz/arkhiv-kursov-valyut/json/');
+            if (!$resp->ok()) {
+                return back()->with('xato', 'CBU serveriga ulanib bo\'lmadi.');
+            }
+            $rates = collect($resp->json())->keyBy('Ccy');
+            $yangilangan = 0;
+            $sana = now()->toDateString();
+
+            Valyuta::where('kod','!=','UZS')->where('holat','faol')->each(function ($v) use ($rates, $sana, &$yangilangan) {
+                if ($rates->has($v->kod)) {
+                    $nominal = (int)($rates[$v->kod]['Nominal'] ?? 1);
+                    $rate    = (float)$rates[$v->kod]['Rate'];
+                    $kurs    = $nominal > 1 ? round($rate / $nominal, 4) : $rate;
+                    $v->update(['kurs' => $kurs, 'kurs_sana' => $sana]);
+                    $yangilangan++;
+                }
+            });
+
+            return back()->with('muvaffaqiyat', "CBU dan {$yangilangan} ta valyuta kursi yangilandi (sana: {$sana}).");
+        } catch (\Exception $e) {
+            return back()->with('xato', 'Xatolik: ' . $e->getMessage());
+        }
+    }
+
     public function destroy(Valyuta $valyuta) {
         if ($valyuta->asosiy) return back()->with('xato', "Asosiy valyutani o'chirish mumkin emas.");
         $kod = $valyuta->kod; $valyuta->delete();

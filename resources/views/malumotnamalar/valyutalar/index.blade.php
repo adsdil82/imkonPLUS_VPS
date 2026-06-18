@@ -4,9 +4,23 @@
 <div class="container-fluid py-3">
 <div class="d-flex justify-content-between align-items-center mb-3">
   <h5 class="mb-0">Valyutalar</h5>
-  @if(Auth::user()->isAdmin())
-  <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">+ Qo'shish</button>
-  @endif
+  <div class="d-flex gap-2">
+    @if(Auth::user()->isAdmin())
+    <form method="POST" action="{{ route('malumotnamalar.valyutalar.cbu-update') }}">@csrf
+      <button class="btn btn-sm btn-success" title="cbu.uz rasmiy saytidan bugungi kurslarni avtomatik yuklash">
+        <i class="bi bi-cloud-download me-1"></i>CBU dan yangilash
+      </button>
+    </form>
+    <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addModal">+ Qo'shish</button>
+    @endif
+  </div>
+</div>
+
+<div class="alert alert-light border py-2 small mb-3">
+  <i class="bi bi-info-circle text-primary me-1"></i>
+  <strong>CBU dan yangilash</strong> — Markaziy bank rasmiy saytidan (<code>cbu.uz</code>) bugungi rasmiy kurslarni avtomatik yuklaydi.
+  UZS (so'm) kursi doim <strong>1</strong> bo'lib qoladi.
+  Qo'lda tahrirlash uchun jadvaldagi <em>Tahrir</em> tugmasini bosing.
 </div>
 
 @if(session('muvaffaqiyat'))<div class="alert alert-success py-2">{{ session('muvaffaqiyat') }}</div>@endif

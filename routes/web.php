@@ -526,6 +526,8 @@ Route::middleware('auth')->group(function () {
                 ->middleware('rol.check:admin');
             Route::delete('/{valyuta}',  [ValyutaController::class, 'destroy'])->name('destroy')
                 ->middleware('rol.check:admin');
+            Route::post('/cbu-update',     [ValyutaController::class, 'cbuUpdate'])->name('cbu-update')
+                ->middleware('rol.check:admin');
         });
 
         // Tashkilot rekvizitlari

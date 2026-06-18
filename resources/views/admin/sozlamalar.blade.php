@@ -163,68 +163,6 @@
         </div>
     </div>
 
-    {{-- ── VALYUTA KURSLARI ─────────────────────────────────────── --}}
-    <div class="col-12">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h6 class="mb-0"><i class="bi bi-currency-exchange me-2 text-warning"></i>Valyuta kurslari spravochnigi</h6>
-                <small class="text-muted">Asosiy valyuta: <strong>UZS (so'm)</strong></small>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info py-2 small mb-3">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Kurslar <strong>1 xorijiy valyuta = ???? so'm</strong> shaklida kiritiladi.
-                    To'lov qilinayotganda sistem avtomatik so'm ekvivalentini hisoblaydi.
-                </div>
-                <div class="row g-3">
-                    @php
-                    $valyutalar = [
-                        'usd' => ['nomi'=>'USD — AQSh dollari',   'bayroq'=>'🇺🇸'],
-                        'eur' => ['nomi'=>'EUR — Yevro',           'bayroq'=>'🇪🇺'],
-                        'rub' => ['nomi'=>'RUB — Rus rubli',       'bayroq'=>'🇷🇺'],
-                        'cny' => ['nomi'=>'CNY — Xitoy yuani',     'bayroq'=>'🇨🇳'],
-                    ];
-                    @endphp
-                    @foreach($valyutalar as $kod => $info)
-                    <div class="col-md-6">
-                        <div class="card border rounded-3 p-3" style="background:#fafbfc">
-                            <div class="d-flex align-items-center mb-2 gap-2">
-                                <span style="font-size:1.4rem">{{ $info['bayroq'] }}</span>
-                                <strong>{{ $info['nomi'] }}</strong>
-                            </div>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <label class="form-label small mb-1 fw-medium text-success">
-                                        <i class="bi bi-arrow-down-circle me-1"></i>Sotish kursi
-                                        <small class="text-muted d-block" style="font-size:.7rem">Bizdan valyuta olish</small>
-                                    </label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="number" name="{{ $kod }}_sotish_kurs"
-                                               class="form-control" step="1" min="1"
-                                               value="{{ old($kod.'_sotish_kurs', $soz[$kod.'_sotish_kurs'] ?? '') }}">
-                                        <span class="input-group-text text-muted">so'm</span>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small mb-1 fw-medium text-danger">
-                                        <i class="bi bi-arrow-up-circle me-1"></i>Olish kursi
-                                        <small class="text-muted d-block" style="font-size:.7rem">Bizga valyuta berish</small>
-                                    </label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="number" name="{{ $kod }}_olish_kurs"
-                                               class="form-control" step="1" min="1"
-                                               value="{{ old($kod.'_olish_kurs', $soz[$kod.'_olish_kurs'] ?? '') }}">
-                                        <span class="input-group-text text-muted">so'm</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    @endforeach
-                </div>
-            </div>
-        </div>
-    </div>
 
     <div class="col-12 mb-4">
         <div class="d-flex justify-content-end">

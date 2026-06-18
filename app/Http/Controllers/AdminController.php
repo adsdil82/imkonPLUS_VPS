@@ -83,11 +83,7 @@ class AdminController extends Controller
             'brand_nomi', 'kompaniya_nomi', 'kompaniya_manzil',
             'kompaniya_telefon', 'kompaniya_inn', 'kompaniya_mfo',
             'kompaniya_hisob', 'kompaniya_bank', 'kompaniya_direktor', 'tema',
-            // Valyuta kurslari
-            'usd_sotish_kurs', 'usd_olish_kurs',
-            'eur_sotish_kurs', 'eur_olish_kurs',
-            'rub_sotish_kurs', 'rub_olish_kurs',
-            'cny_sotish_kurs', 'cny_olish_kurs',
+
         ]));
 
         return back()->with('muvaffaqiyat', 'Sozlamalar saqlandi!');

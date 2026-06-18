@@ -35,6 +35,8 @@ use App\Http\Controllers\YangiTulovTuriController;
 use App\Http\Controllers\NotificationTemplateController;
 use App\Http\Controllers\HarajatController;
 use App\Http\Controllers\PulOqimController;
+use App\Http\Controllers\QurilmaController;
+use App\Http\Controllers\QurilmaProvayderController;
 
 // ─── Autentifikatsiya ─────────────────────────────────────────────
 
@@ -398,6 +400,45 @@ Route::middleware('auth')->group(function () {
         Route::post('/tulov-turlari',          [YangiTulovTuriController::class, 'store'])->name('tulov_turlari.store');
         Route::put('/tulov-turlari/{tur}',     [YangiTulovTuriController::class, 'update'])->name('tulov_turlari.update');
         Route::delete('/tulov-turlari/{tur}',  [YangiTulovTuriController::class, 'destroy'])->name('tulov_turlari.destroy');
+    });
+
+
+    // ─── Qurilmalar Nazorati ─────────────────────────────────────────
+
+    Route::prefix('qurilmalar')->name('qurilmalar.')->group(function () {
+        Route::get('/',                          [QurilmaController::class, 'index'])->name('index');
+        Route::get('/yangi',                     [QurilmaController::class, 'create'])->name('create')
+            ->middleware('rol.check:admin,menejer,omborchi');
+        Route::post('/',                         [QurilmaController::class, 'store'])->name('store')
+            ->middleware('rol.check:admin,menejer,omborchi');
+        Route::get('/{qurilma}',                 [QurilmaController::class, 'show'])->name('show');
+        Route::get('/{qurilma}/tahrirlash',       [QurilmaController::class, 'edit'])->name('edit')
+            ->middleware('rol.check:admin,menejer,omborchi');
+        Route::put('/{qurilma}',                  [QurilmaController::class, 'update'])->name('update')
+            ->middleware('rol.check:admin,menejer,omborchi');
+        Route::delete('/{qurilma}',               [QurilmaController::class, 'destroy'])->name('destroy')
+            ->middleware('rol.check:admin');
+        Route::get('/{qurilma}/loglar',           [QurilmaController::class, 'logs'])->name('loglar');
+        Route::post('/{qurilma}/biriktir',         [QurilmaController::class, 'attach'])->name('attach')
+            ->middleware('rol.check:admin,menejer');
+        Route::post('/{qurilma}/bloklash',         [QurilmaController::class, 'lock'])->name('lock')
+            ->middleware('rol.check:admin');
+        Route::post('/{qurilma}/ochish',           [QurilmaController::class, 'unlock'])->name('unlock')
+            ->middleware('rol.check:admin');
+        Route::post('/{qurilma}/ogohlantirish',    [QurilmaController::class, 'warn'])->name('warn')
+            ->middleware('rol.check:admin,menejer');
+        Route::post('/{qurilma}/ozod-qilish',      [QurilmaController::class, 'release'])->name('release')
+            ->middleware('rol.check:admin');
+    });
+
+    Route::prefix('qurilma-provayderlar')->name('qurilma-provayderlar.')->middleware('rol.check:admin')->group(function () {
+        Route::get('/',                                       [QurilmaProvayderController::class, 'index'])->name('index');
+        Route::post('/{provayder}/toggle',                    [QurilmaProvayderController::class, 'toggle'])->name('toggle');
+        Route::post('/{provayder}/toggle-mock',               [QurilmaProvayderController::class, 'toggleMock'])->name('toggle-mock');
+        Route::get('/{provayder}/sozlamalar',                  [QurilmaProvayderController::class, 'sozlamalar'])->name('sozlamalar');
+        Route::post('/{provayder}/sozlamalar',                 [QurilmaProvayderController::class, 'sozlamalarSaqlash'])->name('sozlama-saqlash');
+        Route::post('/{provayder}/sozlama-qoshish',            [QurilmaProvayderController::class, 'sozlamaQoshish'])->name('sozlama-qoshish');
+        Route::delete('/{provayder}/sozlamalar/{sozlama}',     [QurilmaProvayderController::class, 'sozlamaOchirish'])->name('sozlama-ochirish');
     });
 
 

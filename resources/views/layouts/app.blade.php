@@ -606,6 +606,40 @@
             </ul>
             @endif
 
+        {{-- QURILMALAR NAZORATI --}}
+        @if(Auth::user()->isAdmin() || Auth::user()->isMenejer())
+        <li class="grup-header">
+            <button class="grup-toggle" data-grup="qurilmalar-nazorati">
+                <span class="g-label">&#128241; QURILMALAR</span>
+                <i class="g-icon bi {{ $aktiv_grup==='qurilmalar-nazorati' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+            </button>
+        </li>
+        <ul class="grup-items {{ $aktiv_grup!=='qurilmalar-nazorati' ? 'closed' : '' }}" id="grup-qurilmalar-nazorati">
+            <li class="nav-item">
+                <a href="{{ route('qurilmalar.index') }}"
+                   class="{{ request()->routeIs('qurilmalar.*') ? 'active' : '' }}">
+                   Qurilmalar ro'yxati
+                </a>
+            </li>
+            @if(Auth::user()->isAdmin() || Auth::user()->isMenejer() || Auth::user()->isOmborchi())
+            <li class="nav-item">
+                <a href="{{ route('qurilmalar.create') }}"
+                   class="{{ request()->routeIs('qurilmalar.create') ? 'active' : '' }}">
+                   Qurilma qo'shish
+                </a>
+            </li>
+            @endif
+            @if(Auth::user()->isAdmin())
+            <li class="nav-item">
+                <a href="{{ route('qurilma-provayderlar.index') }}"
+                   class="{{ request()->routeIs('qurilma-provayderlar.*') ? 'active' : '' }}">
+                   Provayderlar
+                </a>
+            </li>
+            @endif
+        </ul>
+        @endif
+
             {{-- XABARNOMA guruh --}}
             @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
             <li class="grup-header">

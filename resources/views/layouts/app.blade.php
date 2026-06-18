@@ -606,6 +606,76 @@
             </ul>
             @endif
 
+        
+        {{-- MA'LUMOTNOMALAR --}}
+        @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki() || Auth::user()->isHisobchi())
+        <li class="grup-header">
+            <button class="grup-toggle" data-grup="malumotnamalar-menu">
+                <span class="g-label">&#128218; MA'LUMOTNOMALAR</span>
+                <i class="g-icon bi {{ $aktiv_grup==='malumotnamalar-menu' ? 'bi-dash-lg' : 'bi-plus-lg' }}"></i>
+            </button>
+        </li>
+        <ul class="grup-items {{ $aktiv_grup!=='malumotnamalar-menu' ? 'closed' : '' }}" id="grup-malumotnamalar-menu">
+            <li class="nav-item"><a href="{{ route('malumotnamalar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.index') ? 'active' : '' }}">
+                Umumiy</a></li>
+            @if(Auth::user()->isAdmin())
+            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Tashkiliy</li>
+            <li class="nav-item"><a href="{{ route('malumotnamalar.filiallar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.filiallar.*') ? 'active' : '' }}">
+                Filiallar</a></li>
+            <li class="nav-item"><a href="{{ route('admin.foydalanuvchilar') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('admin.foydalanuvchilar') ? 'active' : '' }}">
+                Foydalanuvchilar</a></li>
+            <li class="nav-item"><a href="{{ route('malumotnamalar.kassalar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.kassalar.*') ? 'active' : '' }}">
+                Kassalar</a></li>
+            @endif
+            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Tovar va Ombor</li>
+            <li class="nav-item"><a href="{{ route('tovar-guruhlar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('tovar-guruhlar.*') ? 'active' : '' }}">
+                Tovar guruhlari</a></li>
+            <li class="nav-item"><a href="{{ route('katalog.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('katalog.*') ? 'active' : '' }}">
+                Tovar katalogi</a></li>
+            <li class="nav-item"><a href="{{ route('malumotnamalar.birliklar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.birliklar.*') ? 'active' : '' }}">
+                Birliklar</a></li>
+            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Moliya</li>
+            @if(Auth::user()->isAdmin() || Auth::user()->isHisobchi())
+            <li class="nav-item"><a href="{{ route('buxgalteriya.tulov_turlari.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.tulov_turlari.*') ? 'active' : '' }}">
+                To'lov turlari</a></li>
+            @endif
+            <li class="nav-item"><a href="{{ route('malumotnamalar.harajat-turlari.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.harajat-turlari.*') ? 'active' : '' }}">
+                Harajat turlari</a></li>
+            <li class="nav-item"><a href="{{ route('malumotnamalar.pul-kategoriyalar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('malumotnamalar.pul-kategoriyalar.*') ? 'active' : '' }}">
+                Pul oqimi kategoriyalari</a></li>
+            @if(Auth::user()->isAdmin() || Auth::user()->isHisobchi())
+            <li class="nav-item"><a href="{{ route('buxgalteriya.hisoblar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('buxgalteriya.hisoblar.*') ? 'active' : '' }}">
+                Hisoblar rejasi</a></li>
+            @endif
+            @if(Auth::user()->isAdmin() || Auth::user()->isMenejerYoki())
+            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Hujjatlar</li>
+            <li class="nav-item"><a href="{{ route('xabarnoma.shablonlar.index') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('xabarnoma.shablonlar.*') ? 'active' : '' }}">
+                Xabarnoma shablonlari</a></li>
+            @endif
+            @if(Auth::user()->isAdmin())
+            <li class="nav-item ps-2 mt-1" style="font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;opacity:.5">Tizim</li>
+            <li class="nav-item"><a href="{{ route('admin.sozlamalar') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('admin.sozlamalar') ? 'active' : '' }}">
+                Sozlamalar</a></li>
+            <li class="nav-item"><a href="{{ route('admin.ruxsatlar') }}"
+                class="nav-link text-white py-1 {{ request()->routeIs('admin.ruxsatlar') ? 'active' : '' }}">
+                Ruxsatlar</a></li>
+            @endif
+        </ul>
+        @endif
+
         {{-- QURILMALAR NAZORATI --}}
         @if(Auth::user()->isAdmin() || Auth::user()->isMenejer())
         <li class="grup-header">

@@ -37,6 +37,12 @@ use App\Http\Controllers\HarajatController;
 use App\Http\Controllers\PulOqimController;
 use App\Http\Controllers\QurilmaController;
 use App\Http\Controllers\QurilmaProvayderController;
+use App\Http\Controllers\MalumotnomalarController;
+use App\Http\Controllers\FilialController;
+use App\Http\Controllers\KassaController;
+use App\Http\Controllers\BirlikController;
+use App\Http\Controllers\HarajatTuriController;
+use App\Http\Controllers\PulKategoriyaController;
 
 // ─── Autentifikatsiya ─────────────────────────────────────────────
 
@@ -439,6 +445,64 @@ Route::middleware('auth')->group(function () {
         Route::post('/{provayder}/sozlamalar',                 [QurilmaProvayderController::class, 'sozlamalarSaqlash'])->name('sozlama-saqlash');
         Route::post('/{provayder}/sozlama-qoshish',            [QurilmaProvayderController::class, 'sozlamaQoshish'])->name('sozlama-qoshish');
         Route::delete('/{provayder}/sozlamalar/{sozlama}',     [QurilmaProvayderController::class, 'sozlamaOchirish'])->name('sozlama-ochirish');
+    });
+
+
+    // ─── Ma'lumotnomalar (Spravochniklar) ──────────────────────────
+
+    Route::prefix('malumotnamalar')->name('malumotnamalar.')->middleware('rol.check:admin,menejer,hisobchi')->group(function () {
+
+        Route::get('/', [MalumotnomalarController::class, 'index'])->name('index');
+
+        // Filiallar
+        Route::prefix('filiallar')->name('filiallar.')->middleware('rol.check:admin')->group(function () {
+            Route::get('/',              [FilialController::class, 'index'])->name('index');
+            Route::post('/',             [FilialController::class, 'store'])->name('store');
+            Route::put('/{filial}',      [FilialController::class, 'update'])->name('update');
+            Route::delete('/{filial}',   [FilialController::class, 'destroy'])->name('destroy');
+        });
+
+        // Kassalar
+        Route::prefix('kassalar')->name('kassalar.')->middleware('rol.check:admin')->group(function () {
+            Route::get('/',             [KassaController::class, 'index'])->name('index');
+            Route::post('/',            [KassaController::class, 'store'])->name('store');
+            Route::put('/{kassa}',      [KassaController::class, 'update'])->name('update');
+            Route::delete('/{kassa}',   [KassaController::class, 'destroy'])->name('destroy');
+        });
+
+        // Birliklar
+        Route::prefix('birliklar')->name('birliklar.')->group(function () {
+            Route::get('/',             [BirlikController::class, 'index'])->name('index');
+            Route::post('/',            [BirlikController::class, 'store'])->name('store')
+                ->middleware('rol.check:admin,menejer');
+            Route::put('/{birlik}',     [BirlikController::class, 'update'])->name('update')
+                ->middleware('rol.check:admin,menejer');
+            Route::delete('/{birlik}',  [BirlikController::class, 'destroy'])->name('destroy')
+                ->middleware('rol.check:admin');
+        });
+
+        // Harajat turlari
+        Route::prefix('harajat-turlari')->name('harajat-turlari.')->middleware('rol.check:admin,menejer,hisobchi')->group(function () {
+            Route::get('/',                     [HarajatTuriController::class, 'index'])->name('index');
+            Route::post('/',                    [HarajatTuriController::class, 'store'])->name('store')
+                ->middleware('rol.check:admin,menejer');
+            Route::put('/{harajatTuri}',        [HarajatTuriController::class, 'update'])->name('update')
+                ->middleware('rol.check:admin,menejer');
+            Route::delete('/{harajatTuri}',     [HarajatTuriController::class, 'destroy'])->name('destroy')
+                ->middleware('rol.check:admin');
+        });
+
+        // Pul oqimi kategoriyalari
+        Route::prefix('pul-kategoriyalar')->name('pul-kategoriyalar.')->group(function () {
+            Route::get('/',                      [PulKategoriyaController::class, 'index'])->name('index');
+            Route::post('/',                     [PulKategoriyaController::class, 'store'])->name('store')
+                ->middleware('rol.check:admin,menejer');
+            Route::put('/{pulKategoriya}',       [PulKategoriyaController::class, 'update'])->name('update')
+                ->middleware('rol.check:admin,menejer');
+            Route::delete('/{pulKategoriya}',    [PulKategoriyaController::class, 'destroy'])->name('destroy')
+                ->middleware('rol.check:admin');
+        });
+
     });
 
 

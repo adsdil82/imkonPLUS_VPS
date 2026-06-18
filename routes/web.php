@@ -43,6 +43,11 @@ use App\Http\Controllers\KassaController;
 use App\Http\Controllers\BirlikController;
 use App\Http\Controllers\HarajatTuriController;
 use App\Http\Controllers\PulKategoriyaController;
+use App\Http\Controllers\BrendController;
+use App\Http\Controllers\ValyutaController;
+use App\Http\Controllers\TashkilotRekvizitController;
+use App\Http\Controllers\ShartnomRekvizitController;
+use App\Http\Controllers\StatusSababController;
 
 // ─── Autentifikatsiya ─────────────────────────────────────────────
 
@@ -502,6 +507,57 @@ Route::middleware('auth')->group(function () {
             Route::delete('/{pulKategoriya}',    [PulKategoriyaController::class, 'destroy'])->name('destroy')
                 ->middleware('rol.check:admin');
         });
+
+        // Brendlar
+        Route::prefix('brendlar')->name('brendlar.')->middleware('rol.check:admin,menejer')->group(function () {
+            Route::get('/',            [BrendController::class, 'index'])->name('index');
+            Route::post('/',           [BrendController::class, 'store'])->name('store');
+            Route::put('/{brend}',     [BrendController::class, 'update'])->name('update');
+            Route::delete('/{brend}',  [BrendController::class, 'destroy'])->name('destroy')
+                ->middleware('rol.check:admin');
+        });
+
+        // Valyutalar
+        Route::prefix('valyutalar')->name('valyutalar.')->middleware('rol.check:admin,hisobchi')->group(function () {
+            Route::get('/',              [ValyutaController::class, 'index'])->name('index');
+            Route::post('/',             [ValyutaController::class, 'store'])->name('store')
+                ->middleware('rol.check:admin');
+            Route::put('/{valyuta}',     [ValyutaController::class, 'update'])->name('update')
+                ->middleware('rol.check:admin');
+            Route::delete('/{valyuta}',  [ValyutaController::class, 'destroy'])->name('destroy')
+                ->middleware('rol.check:admin');
+        });
+
+        // Tashkilot rekvizitlari
+        Route::prefix('tashkilot-rekvizit')->name('tashkilot-rekvizit.')->middleware('rol.check:admin')->group(function () {
+            Route::get('/',                             [TashkilotRekvizitController::class, 'index'])->name('index');
+            Route::get('/create',                       [TashkilotRekvizitController::class, 'create'])->name('create');
+            Route::post('/',                            [TashkilotRekvizitController::class, 'store'])->name('store');
+            Route::get('/{tashkilotRekvizit}/edit',     [TashkilotRekvizitController::class, 'edit'])->name('edit');
+            Route::put('/{tashkilotRekvizit}',          [TashkilotRekvizitController::class, 'update'])->name('update');
+            Route::delete('/{tashkilotRekvizit}',       [TashkilotRekvizitController::class, 'destroy'])->name('destroy');
+        });
+
+        // Shartnoma rekvizitlari
+        Route::prefix('shartnoma-rekvizit')->name('shartnoma-rekvizit.')->middleware('rol.check:admin')->group(function () {
+            Route::get('/',                              [ShartnomRekvizitController::class, 'index'])->name('index');
+            Route::post('/',                             [ShartnomRekvizitController::class, 'store'])->name('store');
+            Route::put('/{shartnomRekvizit}',            [ShartnomRekvizitController::class, 'update'])->name('update');
+            Route::delete('/{shartnomRekvizit}',         [ShartnomRekvizitController::class, 'destroy'])->name('destroy');
+        });
+
+        // Statuslar va sabablar
+        Route::prefix('statuslar')->name('statuslar.')->group(function () {
+            Route::get('/',                  [StatusSababController::class, 'index'])->name('index');
+            Route::post('/',                 [StatusSababController::class, 'store'])->name('store')
+                ->middleware('rol.check:admin');
+            Route::put('/{statusSabab}',     [StatusSababController::class, 'update'])->name('update')
+                ->middleware('rol.check:admin');
+            Route::delete('/{statusSabab}',  [StatusSababController::class, 'destroy'])->name('destroy')
+                ->middleware('rol.check:admin');
+        });
+
+
 
     });
 
